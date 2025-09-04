@@ -10,15 +10,17 @@ const Home = async () => {
       <h1 className="h1-bold font-inter">Welcome to Next js</h1>
       <h1 className="h1-bold font-space-grotesk">Welcome to Next js</h1>
       <h1 className="h1-bold">Welcome to Next js</h1>
-      <form
-        className="px-10"
-        action={async () => {
-          "use server";
-          await signOut({ redirectTo: ROUTES.SIGN_IN });
-        }}
-      >
-        <Button type="submit">Log out</Button>
-      </form>
+      {session && (
+        <form
+          className="px-10"
+          action={async () => {
+            "use server";
+            await signOut({ redirectTo: ROUTES.SIGN_IN });
+          }}
+        >
+          <Button type="submit">Log out</Button>
+        </form>
+      )}
     </div>
   );
 };
