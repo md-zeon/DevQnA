@@ -1,3 +1,4 @@
+import QuestionCard from "@/components/cards/QuestionCard";
 import HomeFilter from "@/components/filters/HomeFilter";
 import LocalSearch from "@/components/search/localSearch";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,11 @@ const questions = [
       { _id: "1", name: "React" },
       { _id: "2", name: "JavaScript" },
     ],
-    author: { _id: "1", name: "Jhon Doe" },
+    author: {
+      _id: "1",
+      name: "Zeanur Rahaman Zeon",
+      image: "https://avatars.githubusercontent.com/u/138835433?v=4",
+    },
     upvotes: 10,
     answers: 5,
     views: 100,
@@ -59,7 +64,7 @@ const Home = async ({ searchParams }: SearchParams) => {
       <HomeFilter />
       <div className="mt-10 flex w-full flex-col gap-6">
         {filteredQuestions.map((question) => (
-          <h1 key={question._id}>{question.title}</h1>
+          <QuestionCard key={question._id} question={question} />
         ))}
       </div>
     </>

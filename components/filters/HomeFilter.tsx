@@ -15,10 +15,10 @@ const filters = [
 ];
 
 const HomeFilter = () => {
-  const [active, setActive] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
   const filterParams = searchParams.get("filter");
+  const [active, setActive] = useState(filterParams || "");
 
   const handleTypeClick = (filter: string) => {
     let newUrl = "";
