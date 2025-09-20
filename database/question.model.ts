@@ -1,14 +1,14 @@
-import { model, models, Schema, Types } from "mongoose";
+import { model, models, Schema } from "mongoose";
 
 export interface IQuestion {
   title: string;
   content: string;
-  tags: Types.ObjectId[];
+  tags: Schema.Types.ObjectId[];
   views: number;
   upvotes: number;
   downvotes: number;
   answers: number;
-  author: Types.ObjectId;
+  author: Schema.Types.ObjectId;
 }
 
 const QuestionSchema = new Schema<IQuestion>(

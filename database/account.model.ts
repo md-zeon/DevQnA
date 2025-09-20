@@ -1,7 +1,7 @@
-import { model, models, Schema, Types } from "mongoose";
+import { model, models, Schema } from "mongoose";
 
 export interface IAccount {
-  userId: Types.ObjectId;
+  userId: Schema.Types.ObjectId;
   name: string;
   image?: string;
   password?: string;
