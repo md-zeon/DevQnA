@@ -3,6 +3,8 @@ import HomeFilter from "@/components/filters/HomeFilter";
 import LocalSearch from "@/components/search/localSearch";
 import { Button } from "@/components/ui/button";
 import ROUTES from "@/constants/routes";
+import { api } from "@/lib/api";
+import handleError from "@/lib/handlers/error";
 import Link from "next/link";
 
 const questions = [
@@ -26,13 +28,22 @@ const questions = [
   },
 ];
 
+const test = async () => {
+  try {
+    return await api.users.getAll();
+  } catch (error) {
+    return handleError(error, "api");
+  }
+};
+
 interface SearchParams {
   searchParams: Promise<{ [key: string]: string }>;
 }
 
 const Home = async ({ searchParams }: SearchParams) => {
   const { query = "", filter = "" } = await searchParams;
-
+  const users = await test();
+  console.log(users);
   const filteredQuestions = questions.filter((question) => {
     const matchesQuery = question.title
       .toLowerCase()
