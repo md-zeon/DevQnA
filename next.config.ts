@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "avatars.githubusercontent.com",
+        port: "",
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.gogoleusercontent.com",
+        port: "",
       },
     ],
   },
