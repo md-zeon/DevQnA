@@ -2,7 +2,7 @@
 
 import mongoose from "mongoose";
 
-import { ActionResponse, ErrorResponse } from "@/types/global";
+import { ActionResponse, ErrorResponse, Question as Qs } from "@/types/global";
 import action from "../handlers/action";
 import { AskQuestionSchema } from "../validations";
 import handleError from "../handlers/error";
@@ -12,7 +12,7 @@ import TagQuestion from "@/database/tag-question.model";
 
 export async function createQuestion(
   params: CreateQuestionParams
-): Promise<ActionResponse> {
+): Promise<ActionResponse<Qs>> {
   const validationResult = await action({
     params,
     schema: AskQuestionSchema,
@@ -60,14 +60,14 @@ export async function createQuestion(
       tagIds.push(existingTag._id);
       tagQuestionDocuments.push({
         tag: existingTag._id,
-        queston: question._id,
+        question: question._id,
       });
     }
 
     await TagQuestion.insertMany(tagQuestionDocuments, { session });
 
     await Question.findByIdAndUpdate(
-      question._id,
+      { _id: question._id },
       { $push: { tags: { $each: tagIds } } },
       { session }
     );
@@ -79,6 +79,6 @@ export async function createQuestion(
     await session.abortTransaction();
     return handleError(error) as ErrorResponse;
   } finally {
-    session.endSession();
+    await session.endSession();
   }
 }
