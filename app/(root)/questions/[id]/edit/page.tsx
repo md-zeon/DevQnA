@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import QuestionForm from "@/components/forms/QuestionForm";
 import ROUTES from "@/constants/routes";
 import { getQuestion } from "@/lib/actions/question.action";
-import { RouteParams, RouteParams } from "@/types/global";
+import { RouteParams } from "@/types/global";
 import { notFound, redirect } from "next/navigation";
 import React from "react";
 
