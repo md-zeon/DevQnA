@@ -1,7 +1,7 @@
 import ROUTES from "@/constants/routes";
 import Link from "next/link";
 import { Badge } from "../ui/badge";
-import { getDevIconClassName } from "@/lib/utils";
+import { cn, getDevIconClassName, getTechDescription } from "@/lib/utils";
 import Image from "next/image";
 
 interface Props {
@@ -26,6 +26,7 @@ const TagCard = ({
   handleRemove,
 }: Props) => {
   const iconClass = getDevIconClassName(name);
+  const iconDescription = getTechDescription(name);
 
   const Content = (
     <>
@@ -72,6 +73,31 @@ const TagCard = ({
       </Link>
     );
   }
+
+  return (
+    <Link href={ROUTES.TAG(_id)} className="shadow-light100_darknone">
+      <article className="background-light900_dark200 light-border flex w-full flex-col rounded-2xl border px-8 py-10 sm:w-[260px]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="background-light800_dark400 dark:background-light800_darkgradient w-fit rounded-sm px-5 py-1.5">
+              <p className="paragraph-semibold text-dark300_light900">{name}</p>
+            </div>
+            <i className={cn(iconClass, "text-2xl")} aria-hidden="true" />
+          </div>
+        </div>
+        <p className="small-regular text-dark500_light700 mt-5 line-clamp-3 w-full">
+          {iconDescription}
+        </p>
+
+        <p className="small-medium text-dark400_light500 mt-3.5">
+          <span className="body-semibold primary-text-gradient mr-2.5">
+            {questions}+
+          </span>
+          Questions
+        </p>
+      </article>
+    </Link>
+  );
 };
 
 export default TagCard;
