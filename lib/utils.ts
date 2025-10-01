@@ -1,3 +1,4 @@
+import { techDescriptionMap } from "@/constants/techDescriptionMap";
 import { techMap } from "@/constants/techMap";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -14,7 +15,17 @@ export const getDevIconClassName = (techName: string) => {
     : "devicon-devicon-plain";
 };
 
-export const getTimeStamp = (date: Date): string => {
+export function getTechDescription(techName: string): string {
+  const normalizedTech = techName.replace(/[ .]/g, "").toLowerCase();
+
+  return (
+    techDescriptionMap[normalizedTech] ||
+    `${techName} is a technology or tool widely used in software development, providing valuable features and capabilities.`
+  );
+}
+
+export const getTimeStamp = (createdAt: Date): string => {
+  const date = new Date(createdAt);
   const now = new Date();
   const diff = now.getTime() - date.getTime(); // Difference in milliseconds
 
@@ -40,5 +51,15 @@ export const getTimeStamp = (date: Date): string => {
     return `${months} month${months !== 1 ? "s" : ""} ago`;
   } else {
     return `${years} year${years !== 1 ? "s" : ""} ago`;
+  }
+};
+
+export const formatNumber = (number: number) => {
+  if (number >= 1000000) {
+    return (number / 1000000).toFixed(1) + "M";
+  } else if (number >= 1000) {
+    return (number / 1000).toFixed(1) + "K";
+  } else {
+    return number.toString();
   }
 };
