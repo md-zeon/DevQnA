@@ -327,10 +327,10 @@ export async function incrementViews(
 
     question.views++;
     await question.save();
-    revalidatePath(ROUTES.QUESTION(questionId));
+
+    // revalidatePath(ROUTES.QUESTION(questionId)); // approach 1
 
     return { success: true, data: { views: question.views } };
-
   } catch (error) {
     return handleError(error) as ErrorResponse;
   }
