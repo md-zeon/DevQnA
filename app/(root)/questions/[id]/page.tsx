@@ -8,23 +8,32 @@ import { formatNumber, getTimeStamp } from "@/lib/utils";
 import { RouteParams, Tag } from "@/types/global";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import React from "react";
 // import View from "../view";
 
 const QuestionDetails = async ({ params }: RouteParams) => {
   const { id } = await params;
 
-  const [_, { success, data: question }] = await Promise.all([
-    await incrementViews({ questionId: id }),
-    await getQuestion({ questionId: id }),
-  ]);
+  // Views Approach 02
+  // const [_, { success, data: question }] = await Promise.all([
+  //   await incrementViews({ questionId: id }),
+  //   await getQuestion({ questionId: id }),
+  // ]);
+
+  const { success, data: question } = await getQuestion({ questionId: id });
+
+  // Views Approach 03
+  after(async () => {
+    await incrementViews({ questionId: id });
+  });
 
   if (!success || !question) return redirect("/404");
 
   const { title, author, content, answers, views, tags, createdAt } = question;
   return (
     <>
-      {/* <View questionId={id} /> */}
+      {/* <View questionId={id} /> [View Approach 01] */}
       <div className="flex-start w-full flex-col">
         <div className="flex w-full flex-col-reverse justify-between">
           <div className="flex items-center justify-start gap-1">
