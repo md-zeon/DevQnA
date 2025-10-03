@@ -13,6 +13,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import React from "react";
+import Votes from "@/components/votes/Votes";
 // import View from "../view";
 
 const QuestionDetails = async ({ params }: RouteParams) => {
@@ -67,7 +68,12 @@ const QuestionDetails = async ({ params }: RouteParams) => {
           </div>
 
           <div className="flex justify-end">
-            <p className="">Votes</p>
+            <Votes
+              upvotes={question.upvotes}
+              hasupVoted={true}
+              downvotes={question.downvotes}
+              hasdownVoted={false}
+            />
           </div>
         </div>
         <h2 className="h2-semibold text-dark200_light900 mt-3.5 w-full">
