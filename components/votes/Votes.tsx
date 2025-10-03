@@ -17,7 +17,7 @@ const Votes = ({ upvotes, downvotes, hasupVoted, hasdownVoted }: Params) => {
   const [isLoading, setIsLoading] = useState(false);
   const session = useSession();
 
-  const userId = session.data?.user?._id;
+  const userId = session.data?.user?.id;
 
   const handleVote = async (voteType: "upvote" | "downvote") => {
     if (!userId) {
