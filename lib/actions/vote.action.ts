@@ -15,6 +15,8 @@ import {
 } from "../validations";
 import handleError from "../handlers/error";
 import { Answer, Question, Vote } from "@/database";
+import { revalidatePath } from "next/cache";
+import ROUTES from "@/constants/routes";
 
 export async function updateVoteCount(
   params: updateVoteCountParams,
@@ -105,10 +107,10 @@ export async function createVote(
       await Vote.create(
         [
           {
-            targetId,
-            targetType,
+            author: userId,
+            actionId: targetId,
+            actionType: targetType,
             voteType,
-            change: 1,
           },
         ],
         { session }
@@ -121,6 +123,8 @@ export async function createVote(
     }
 
     await session.commitTransaction();
+
+    revalidatePath(ROUTES.QUESTION(targetId));
 
     return { success: true };
   } catch (error) {
