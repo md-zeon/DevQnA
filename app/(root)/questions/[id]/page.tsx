@@ -15,6 +15,7 @@ import { after } from "next/server";
 import React, { Suspense } from "react";
 import Votes from "@/components/votes/Votes";
 import { hasVoted } from "../../../../lib/actions/vote.action";
+import SaveQuestion from "@/components/questions/SaveQuestion";
 // import View from "../view";
 
 const QuestionDetails = async ({ params }: RouteParams) => {
@@ -82,6 +83,10 @@ const QuestionDetails = async ({ params }: RouteParams) => {
                 targetId={question._id}
                 hasVotedPromise={hasVotedPromise}
               />
+            </Suspense>
+
+            <Suspense fallback={<div>Loading...</div>}>
+              <SaveQuestion questionId={question._id} />
             </Suspense>
           </div>
         </div>

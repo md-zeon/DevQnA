@@ -47,7 +47,7 @@ export async function toggleSaveQuestion(
     });
 
     revalidatePath(ROUTES.QUESTION(questionId));
-    
+
     return { success: true, data: { saved: true } };
   } catch (error) {
     return handleError(error) as ErrorResponse;
