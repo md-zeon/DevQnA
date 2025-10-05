@@ -19,8 +19,10 @@ import SaveQuestion from "@/components/questions/SaveQuestion";
 import { hasSavedQuestion } from "@/lib/actions/collection.action";
 // import View from "../view";
 
-const QuestionDetails = async ({ params }: RouteParams) => {
+const QuestionDetails = async ({ params, searchParams }: RouteParams) => {
   const { id } = await params;
+
+  const { page, pageSize, filter } = await searchParams;
 
   // Views Approach 02
   // const [_, { success, data: question }] = await Promise.all([
@@ -43,9 +45,9 @@ const QuestionDetails = async ({ params }: RouteParams) => {
     error: answersError,
   } = await getAnswers({
     questionId: id,
-    page: 1,
-    pageSize: 10,
-    filter: "latest",
+    page: Number(page) || 1,
+    pageSize: Number(pageSize) || 10,
+    filter: filter,
   });
 
   const hasVotedPromise = hasVoted({

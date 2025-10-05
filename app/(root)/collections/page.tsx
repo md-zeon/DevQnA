@@ -1,13 +1,11 @@
 import QuestionCard from "@/components/cards/QuestionCard";
 import DataRenderer from "@/components/DataRenderer";
-import HomeFilter from "@/components/filters/HomeFilter";
+import CommonFilter from "@/components/filters/CommonFilter";
 import LocalSearch from "@/components/search/LocalSearch";
-import { Button } from "@/components/ui/button";
+import { CollectionFilters } from "@/constants/filters";
 import ROUTES from "@/constants/routes";
 import { EMPTY_QUESTION } from "@/constants/states";
 import { getSavedQuestions } from "@/lib/actions/collection.action";
-import { getQuestions } from "@/lib/actions/question.action";
-import Link from "next/link";
 
 interface SearchParams {
   searchParams: Promise<{ [key: string]: string }>;
@@ -35,6 +33,11 @@ const Collections = async ({ searchParams }: SearchParams) => {
           placeholder="Search questions..."
           iconPosition="left"
           otherClasses="flex-1"
+        />
+
+        <CommonFilter
+          filters={CollectionFilters}
+          otherClasses="min-h-[56px] sm:min-w-[170px]"
         />
       </div>
 
