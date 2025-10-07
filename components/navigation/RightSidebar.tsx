@@ -35,12 +35,10 @@ const popularTags = [
 ];
 
 const RightSidebar = async () => {
-  const { success, data: hotQuestions, error } = await getHotQuestions();
-  const {
-    success: tagSuccess,
-    data: popularTags,
-    error: tagError,
-  } = await getTopTags();
+  const [
+    { success, data: hotQuestions, error },
+    { success: tagSuccess, data: popularTags, error: tagError },
+  ] = await Promise.all([getHotQuestions(), getTopTags()]);
 
   return (
     <section className="pt-36 custom-scrollbar background-light900_dark200 light-border sticky right-0 top-0 flex h-screen w-[350px] flex-col overflow-y-auto border-l p-6 shadow-light-300 dark:shadow-none max-xl:hidden">

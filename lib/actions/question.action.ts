@@ -6,6 +6,7 @@ import {
   ActionResponse,
   ErrorResponse,
   PaginatedSearchParams,
+  Question as QuestionType,
 } from "@/types/global";
 import action from "../handlers/action";
 import {
@@ -338,7 +339,7 @@ export async function incrementViews(
 }
 
 export async function getHotQuestions(): Promise<
-  ActionResponse<IQuestionDoc[]>
+  ActionResponse<QuestionType[]>
 > {
   try {
     await dbConnect();
