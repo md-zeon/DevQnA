@@ -8,7 +8,6 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import React, { use, useState } from "react";
 import { toast } from "sonner";
-import { success } from "zod";
 
 interface Params {
   upvotes: number;

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 interface Tag {
   _id: string;
   name: string;
+  questions?: number;
 }
 
 interface Author {
@@ -61,5 +62,43 @@ interface Answer {
   content: string;
   upvotes: number;
   downvotes: number;
+  question: string;
   createdAt: Date;
+}
+
+interface User {
+  _id: string;
+  name: string;
+  username: string;
+  email: string;
+  bio?: string;
+  image?: string;
+  location?: string;
+  portfolio?: string;
+  reputation?: number;
+}
+
+interface Collection {
+  _id: string;
+  question: Question;
+  author: string | Author;
+}
+
+interface User {
+  _id: string;
+  name: string;
+  username: string;
+  email: string;
+  bio?: string;
+  image?: string;
+  location?: string;
+  portfolio?: string;
+  reputation?: number;
+  createdAt: Date;
+}
+
+interface BadgeCounts {
+  GOLD: number;
+  SILVER: number;
+  BRONZE: number;
 }
