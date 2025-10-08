@@ -5,6 +5,7 @@ import {
   getUser,
   getUserAnswers,
   getUserQuestions,
+  getUserTopTags,
 } from "@/lib/actions/user.action";
 import { RouteParams } from "@/types/global";
 import { notFound } from "next/navigation";
@@ -57,8 +58,17 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
     pageSize: Number(pageSize) || 10,
   });
 
+  const {
+    success: userTopTagsSuccess,
+    data: userTopTags,
+    error: userTopTagsError,
+  } = await getUserTopTags({
+    userId: id,
+  });
+
   const { questions, isNext: hasMoreQuestions } = userQuestions!;
   const { answers, isNext: hasMoreAnswers } = userAnswers!;
+  const { tags } = userTopTags!;
 
   const { user, totalQuestions, totalAnswers } = data!;
   const { _id, name, image, createdAt, username, bio, location, portfolio } =
