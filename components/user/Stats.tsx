@@ -40,9 +40,9 @@ const Stats = ({ totalQuestions, totalAnswers, badges }: Props) => {
           </div>
           <div className="">
             <p className="paragraph-semibold text-dark200_light900">
-              {formatNumber(totalQuestions)}
+              {formatNumber(totalAnswers)}
             </p>
-            <p className="body-medium text-dark400_light700">Questions</p>
+            <p className="body-medium text-dark400_light700">Answers</p>
           </div>
         </div>
 
