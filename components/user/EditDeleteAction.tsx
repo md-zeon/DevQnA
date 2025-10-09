@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { deleteQuestion } from "@/lib/actions/question.action";
 
 interface Props {
   type: "Question" | "Answer";
@@ -32,6 +33,7 @@ const EditDeleteAction = ({ type, itemId }: Props) => {
   const handleDelete = async () => {
     if (type === "Question") {
       // call api to delete Question
+      await deleteQuestion({ questionId: itemId });
 
       toast("Question deleted", {
         description: "Your Question has been deleted successfully",
@@ -46,7 +48,9 @@ const EditDeleteAction = ({ type, itemId }: Props) => {
   };
 
   return (
-    <div className={`flex items-center justify-end gap-3 max-sm:w-full ${type === "Answer" && 'gap-0 justify-center'}`}>
+    <div
+      className={`flex items-center justify-end gap-3 max-sm:w-full ${type === "Answer" && "gap-0 justify-center"}`}
+    >
       {type === "Question" && (
         <Image
           src="/icons/edit.svg"
