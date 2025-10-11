@@ -31,6 +31,7 @@ import { Answer, Collection, Interaction, Vote } from "@/database";
 import { after } from "next/server";
 import { createInteraction } from "./interaction.action";
 import { Types } from "mongoose";
+import { auth } from "@/auth";
 
 export async function createQuestion(params: CreateQuestionParams): Promise<ActionResponse<IQuestionDoc>> {
   const validationResult = await action({
@@ -231,7 +232,7 @@ export async function getRecommendedQuestions({ userId, query, skip, limit }: Re
   const interactions = await Interaction.find({
     user: new Types.ObjectId(userId),
     actionType: "question",
-    actions: { $in: ["view", "upvote", "bookmark", "post"] },
+    action: { $in: ["view", "upvote", "bookmark", "post"] },
   })
     .sort({ createdAt: -1 })
     .limit(50)
@@ -260,7 +261,7 @@ export async function getRecommendedQuestions({ userId, query, skip, limit }: Re
   const questions = await Question.find(recommendedQuery)
     .populate("tags", "name")
     .populate("author", "name image")
-    .sort({ upvoted: -1, views: -1 })
+    .sort({ upvotes: -1, views: -1 })
     .skip(skip)
     .limit(limit)
     .lean();
@@ -289,31 +290,55 @@ export async function getQuestions(
 
   const filterQuery: FilterQuery<typeof Question> = {};
 
-  if (filter === "recommended") return { success: true, data: { questions: [], isNext: false } };
-
-  if (query) {
-    filterQuery.$or = [{ title: { $regex: new RegExp(query, "i") } }, { content: { $regex: new RegExp(query, "i") } }];
-  }
-
   let sortCriteria = {};
 
-  switch (filter) {
-    case "newest":
-      sortCriteria = { createdAt: -1 };
-      break;
-    case "unanswered":
-      filterQuery.answers = 0;
-      sortCriteria = { createdAt: -1 };
-      break;
-    case "popular":
-      sortCriteria = { upvotes: -1 };
-      break;
-    default:
-      sortCriteria = { createdAt: -1 };
-      break;
-  }
-
   try {
+    if (filter === "recommended") {
+      const session = await auth();
+      const userId = session?.user?.id;
+
+      if (!userId) {
+        return {
+          success: true,
+          data: { questions: [], isNext: false },
+        };
+      }
+
+      const recommended = await getRecommendedQuestions({
+        userId,
+        query,
+        skip,
+        limit,
+      });
+
+      return { success: true, data: recommended };
+    }
+
+    // search query
+    if (query) {
+      filterQuery.$or = [
+        { title: { $regex: new RegExp(query, "i") } },
+        { content: { $regex: new RegExp(query, "i") } },
+      ];
+    }
+
+    // filters
+    switch (filter) {
+      case "newest":
+        sortCriteria = { createdAt: -1 };
+        break;
+      case "unanswered":
+        filterQuery.answers = 0;
+        sortCriteria = { createdAt: -1 };
+        break;
+      case "popular":
+        sortCriteria = { upvotes: -1 };
+        break;
+      default:
+        sortCriteria = { createdAt: -1 };
+        break;
+    }
+
     const totalQuestions = await Question.countDocuments(filterQuery);
 
     const questions = await Question.find(filterQuery)
