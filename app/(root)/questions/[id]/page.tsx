@@ -17,7 +17,29 @@ import Votes from "@/components/votes/Votes";
 import { hasVoted } from "../../../../lib/actions/vote.action";
 import SaveQuestion from "@/components/questions/SaveQuestion";
 import { hasSavedQuestion } from "@/lib/actions/collection.action";
+import { Metadata } from "next";
 // import View from "../view";
+
+export async function generateMetadata({ params }: RouteParams): Promise<Metadata> {
+  const { id } = await params;
+  const { success, data: question } = await getQuestion({ questionId: id });
+  if (!success || !question) {
+    return {
+      title: "Question Not Found",
+      description: "The question you are looking for does not exist.",
+    };
+  }
+
+  return {
+    title: question.title,
+    description: question.content.slice(0, 100), // First 160 characters of content
+    twitter: {
+      card: "summary_large_image",
+      title: question.title,
+      description: question.content.slice(0, 100),
+    },
+  };
+}
 
 const QuestionDetails = async ({ params, searchParams }: RouteParams) => {
   const { id } = await params;
@@ -75,9 +97,7 @@ const QuestionDetails = async ({ params, searchParams }: RouteParams) => {
             />
 
             <Link href={ROUTES.PROFILE(author._id)}>
-              <p className="paragraph-semibold text-dark300_light700">
-                {author.name}
-              </p>
+              <p className="paragraph-semibold text-dark300_light700">{author.name}</p>
             </Link>
           </div>
 
@@ -100,9 +120,7 @@ const QuestionDetails = async ({ params, searchParams }: RouteParams) => {
             </Suspense>
           </div>
         </div>
-        <h2 className="h2-semibold text-dark200_light900 mt-3.5 w-full">
-          {title}
-        </h2>
+        <h2 className="h2-semibold text-dark200_light900 mt-3.5 w-full">{title}</h2>
       </div>
 
       <div className="mb-8 mt-5 flex flex-wrap gap-4">
