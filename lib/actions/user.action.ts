@@ -7,6 +7,7 @@ import {
   Question as QuestionType,
   User as UserType,
   Answer as AnswerType,
+  Badges,
 } from "@/types/global";
 import action from "../handlers/action";
 import {
@@ -19,12 +20,8 @@ import {
 import handleError from "../handlers/error";
 import { FilterQuery, PipelineStage, Types } from "mongoose";
 import { Answer, Question, User } from "@/database";
-import {
-  GetUserAnswersParams,
-  GetUserParams,
-  GetUserQuestionsParams,
-  GetUserTagsParams,
-} from "@/types/action";
+import { GetUserAnswersParams, GetUserParams, GetUserQuestionsParams, GetUserTagsParams } from "@/types/action";
+import { assignBadges } from "../utils";
 
 export async function getUsers(
   params: PaginatedSearchParams
@@ -46,10 +43,7 @@ export async function getUsers(
   const filterQuery: FilterQuery<typeof User> = {};
 
   if (query) {
-    filterQuery.$or = [
-      { name: { $regex: query, $options: "i" } },
-      { email: { $regex: query, $options: "i" } },
-    ];
+    filterQuery.$or = [{ name: { $regex: query, $options: "i" } }, { email: { $regex: query, $options: "i" } }];
   }
 
   let sortCriteria = {};
@@ -71,10 +65,7 @@ export async function getUsers(
 
   try {
     const totalUsers = await User.countDocuments(filterQuery);
-    const users = await User.find(filterQuery)
-      .sort(sortCriteria)
-      .skip(skip)
-      .limit(limit);
+    const users = await User.find(filterQuery).sort(sortCriteria).skip(skip).limit(limit);
 
     const isNext = totalUsers > skip + users.length;
 
@@ -196,10 +187,7 @@ export async function getUserAnswers(params: GetUserAnswersParams): Promise<
       author: userId,
     });
 
-    const answers = await Answer.find({ author: userId })
-      .populate("author", "_id name image")
-      .skip(skip)
-      .limit(limit);
+    const answers = await Answer.find({ author: userId }).populate("author", "_id name image").skip(skip).limit(limit);
 
     const isNext = totalAnswers > skip + answers.length;
 
@@ -217,9 +205,7 @@ export async function getUserAnswers(params: GetUserAnswersParams): Promise<
 
 export async function getUserTopTags(
   params: GetUserTagsParams
-): Promise<
-  ActionResponse<{ tags: { _id: string; name: string; count: number }[] }>
-> {
+): Promise<ActionResponse<{ tags: { _id: string; name: string; count: number }[] }>> {
   const validationResult = await action({ params, schema: GetUserTagsSchema });
 
   if (validationResult instanceof Error) {
@@ -258,6 +244,73 @@ export async function getUserTopTags(
     return {
       success: true,
       data: { tags: JSON.parse(JSON.stringify(tags)) },
+    };
+  } catch (error) {
+    return handleError(error) as ErrorResponse;
+  }
+}
+
+export async function getUserStats(params: GetUserParams): Promise<
+  ActionResponse<{
+    totalQuestions: number;
+    totalAnswers: number;
+    badges: Badges;
+  }>
+> {
+  const validationResult = await action({
+    params,
+    schema: GetUserSchema,
+  });
+
+  if (validationResult instanceof Error) {
+    return handleError(validationResult) as ErrorResponse;
+  }
+
+  const { userId } = params;
+
+  try {
+    const [questionStats] = await Question.aggregate([
+      { $match: { author: new Types.ObjectId(userId) } },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+          upvotes: { $sum: "$upvotes" },
+          views: { $sum: "$views" },
+        },
+      },
+    ]);
+
+    const [answerStats] = await Answer.aggregate([
+      { $match: { author: new Types.ObjectId(userId) } },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+          upvotes: { $sum: "$upvotes" },
+        },
+      },
+    ]);
+
+    const badges = assignBadges({
+      criteria: [
+        { type: "ANSWER_COUNT", count: answerStats.count },
+        { type: "QUESTION_COUNT", count: questionStats.count },
+        {
+          type: "QUESTION_UPVOTES",
+          count: questionStats.upvotes + answerStats.upvotes,
+        },
+        { type: "TOTAL_VIEWS", count: questionStats.views },
+      ],
+    });
+
+    return {
+      success: true,
+      data: {
+        totalQuestions: questionStats.count,
+        totalAnswers: answerStats.count,
+        badges,
+      },
     };
   } catch (error) {
     return handleError(error) as ErrorResponse;

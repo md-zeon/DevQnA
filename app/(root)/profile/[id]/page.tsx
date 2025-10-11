@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import ProfileLink from "@/components/user/ProfileLink";
 import UserAvatar from "@/components/UserAvatar";
-import { getUser, getUserAnswers, getUserQuestions, getUserTopTags } from "@/lib/actions/user.action";
+import { getUser, getUserAnswers, getUserQuestions, getUserStats, getUserTopTags } from "@/lib/actions/user.action";
 import { RouteParams } from "@/types/global";
 import { notFound } from "next/navigation";
 import dayjs from "dayjs";
@@ -16,7 +16,7 @@ import DataRenderer from "@/components/DataRenderer";
 import Pagination from "@/components/Pagination";
 import { EMPTY_QUESTION, EMPTY_ANSWERS, EMPTY_TAGS } from "@/constants/states";
 
-const Profile = async ({ params, searchParams }: RouteParams) => {
+const ProfilePage = async ({ params, searchParams }: RouteParams) => {
   const { id } = await params;
   const { page, pageSize } = await searchParams;
   if (!id) notFound();
@@ -27,9 +27,15 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
     userId: id,
   });
 
-  if (!success) {
-    return <div className="h1-bold text-dark100_light900">{error?.message}</div>;
-  }
+  if (!success)
+    return (
+      <div className="flex flex-col items-center justify-center gap-4">
+        <h1 className="h1-bold text-dark100_light900">User not found</h1>
+        <p className="paragraph-regular text-dark200_light800 max-w-md">{error?.message}</p>
+      </div>
+    );
+
+  const { data: userStats } = await getUserStats({ userId: id });
 
   const {
     success: userQuestionsSuccess,
@@ -93,7 +99,7 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
               {location && (
                 <ProfileLink
                   imgUrl="/icons/location.svg"
-                  title="Location"
+                  title={location}
                 />
               )}
 
@@ -118,13 +124,15 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
         </div>
       </section>
       <Stats
-        totalQuestions={totalQuestions}
-        totalAnswers={totalAnswers}
-        badges={{
-          GOLD: 0,
-          SILVER: 0,
-          BRONZE: 0,
-        }}
+        totalQuestions={userStats?.totalQuestions || 0}
+        totalAnswers={userStats?.totalAnswers || 0}
+        badges={
+          userStats?.badges || {
+            GOLD: 0,
+            SILVER: 0,
+            BRONZE: 0,
+          }
+        }
         reputationPoints={user.reputation || 0}
       />
 
@@ -239,4 +247,4 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
   );
 };
 
-export default Profile;
+export default ProfilePage;
