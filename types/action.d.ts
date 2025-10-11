@@ -119,3 +119,11 @@ interface JobFilterParams {
   query: string;
   page: string;
 }
+
+interface UpdateUserParams {
+  name?: string;
+  username?: string;
+  email?: string;
+  image?: string;
+  password?: string;
+}
