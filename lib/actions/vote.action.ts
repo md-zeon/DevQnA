@@ -1,27 +1,17 @@
 "use server";
 import mongoose, { ClientSession } from "mongoose";
-import {
-  CreateVoteParams,
-  HasVotedParams,
-  HasVotedResponse,
-  updateVoteCountParams,
-} from "@/types/action";
+import { CreateVoteParams, HasVotedParams, HasVotedResponse, updateVoteCountParams } from "@/types/action";
 import { ActionResponse, ErrorResponse } from "@/types/global";
 import action from "../handlers/action";
-import {
-  CreateVoteSchema,
-  hasVotedSchema,
-  UpdateVoteCountSchema,
-} from "../validations";
+import { CreateVoteSchema, hasVotedSchema, UpdateVoteCountSchema } from "../validations";
 import handleError from "../handlers/error";
 import { Answer, Question, Vote } from "@/database";
 import { revalidatePath } from "next/cache";
 import ROUTES from "@/constants/routes";
+import { after } from "next/server";
+import { createInteraction } from "./interaction.action";
 
-export async function updateVoteCount(
-  params: updateVoteCountParams,
-  session?: ClientSession
-): Promise<ActionResponse> {
+export async function updateVoteCount(params: updateVoteCountParams, session?: ClientSession): Promise<ActionResponse> {
   const validationResult = await action({
     params,
     schema: UpdateVoteCountSchema,
@@ -36,16 +26,10 @@ export async function updateVoteCount(
   const voteField = voteType === "upvote" ? "upvotes" : "downvotes";
 
   try {
-    const result = await Model.findByIdAndUpdate(
-      targetId,
-      { $inc: { [voteField]: change } },
-      { new: true, session }
-    );
+    const result = await Model.findByIdAndUpdate(targetId, { $inc: { [voteField]: change } }, { new: true, session });
 
     if (!result) {
-      return handleError(
-        new Error("Failed to update vote count")
-      ) as ErrorResponse;
+      return handleError(new Error("Failed to update vote count")) as ErrorResponse;
     }
     return { success: true };
   } catch (error) {
@@ -53,9 +37,7 @@ export async function updateVoteCount(
   }
 }
 
-export async function createVote(
-  params: CreateVoteParams
-): Promise<ActionResponse> {
+export async function createVote(params: CreateVoteParams): Promise<ActionResponse> {
   const validationResult = await action({
     params,
     schema: CreateVoteSchema,
@@ -85,26 +67,13 @@ export async function createVote(
       if (existingVote.voteType === voteType) {
         // if the user has already voted with the same voteType, remove the vote
         await Vote.deleteOne({ _id: existingVote._id }).session(session);
-        await updateVoteCount(
-          { targetId, targetType, voteType, change: -1 },
-          session
-        );
+        await updateVoteCount({ targetId, targetType, voteType, change: -1 }, session);
       } else {
         // if the user has already voted with a different voteType, update the vote
-        await Vote.findByIdAndUpdate(
-          existingVote._id,
-          { voteType },
-          { new: true, session }
-        );
+        await Vote.findByIdAndUpdate(existingVote._id, { voteType }, { new: true, session });
 
-        await updateVoteCount(
-          { targetId, targetType, voteType: existingVote.voteType, change: -1 },
-          session
-        );
-        await updateVoteCount(
-          { targetId, targetType, voteType, change: 1 },
-          session
-        );
+        await updateVoteCount({ targetId, targetType, voteType: existingVote.voteType, change: -1 }, session);
+        await updateVoteCount({ targetId, targetType, voteType, change: 1 }, session);
       }
     } else {
       // if the user has not voted yet, create a new vote
@@ -120,11 +89,18 @@ export async function createVote(
         { session }
       );
 
-      await updateVoteCount(
-        { targetId, targetType, voteType, change: 1 },
-        session
-      );
+      await updateVoteCount({ targetId, targetType, voteType, change: 1 }, session);
     }
+
+    // log the interaction
+    after(async () => {
+      await createInteraction({
+        action: voteType,
+        actionId: targetId,
+        actionTarget: targetType,
+        authorId: userId as string,
+      });
+    });
 
     await session.commitTransaction();
 
@@ -139,9 +115,7 @@ export async function createVote(
   }
 }
 
-export async function hasVoted(
-  params: HasVotedParams
-): Promise<ActionResponse<HasVotedResponse>> {
+export async function hasVoted(params: HasVotedParams): Promise<ActionResponse<HasVotedResponse>> {
   const validationResult = await action({
     params,
     schema: hasVotedSchema,

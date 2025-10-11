@@ -2,31 +2,18 @@
 
 import mongoose from "mongoose";
 import Answer, { IAnswerDoc } from "@/database/answer.model";
-import {
-  CreateAnswerParams,
-  DeleteAnswerParams,
-  GetAnswerParams,
-} from "@/types/action";
-import {
-  ActionResponse,
-  Answer as AnswerType,
-  ErrorResponse,
-} from "@/types/global";
+import { CreateAnswerParams, DeleteAnswerParams, GetAnswerParams } from "@/types/action";
+import { ActionResponse, Answer as AnswerType, ErrorResponse } from "@/types/global";
 import action from "../handlers/action";
-import {
-  AnswerServerSchema,
-  DeleteAnswerSchema,
-  getAnswersSchema,
-} from "../validations";
+import { AnswerServerSchema, DeleteAnswerSchema, getAnswersSchema } from "../validations";
 import handleError from "../handlers/error";
 import { Question, Vote } from "@/database";
 import { revalidatePath } from "next/cache";
 import ROUTES from "@/constants/routes";
-import { filter } from "@mdxeditor/editor";
+import { after } from "next/server";
+import { createInteraction } from "./interaction.action";
 
-export async function createAnswer(
-  params: CreateAnswerParams
-): Promise<ActionResponse<IAnswerDoc>> {
+export async function createAnswer(params: CreateAnswerParams): Promise<ActionResponse<IAnswerDoc>> {
   const validationResult = await action({
     params,
     schema: AnswerServerSchema,
@@ -51,7 +38,7 @@ export async function createAnswer(
       throw new Error("Question not found");
     }
 
-    const newAnswer = await Answer.create(
+    const [newAnswer] = await Answer.create(
       [
         {
           author: userId,
@@ -68,6 +55,17 @@ export async function createAnswer(
 
     question.answers += 1;
     await question.save({ session });
+
+    // log the interaction
+    after(async () => {
+      await createInteraction({
+        action: "post",
+        actionId: newAnswer._id.toString(),
+        actionTarget: "answer",
+        authorId: userId as string,
+      });
+    });
+
     await session.commitTransaction();
 
     revalidatePath(ROUTES.QUESTION(questionId));
@@ -145,9 +143,7 @@ export async function getAnswers(params: GetAnswerParams): Promise<
   }
 }
 
-export async function deleteAnswer(
-  params: DeleteAnswerParams
-): Promise<ActionResponse> {
+export async function deleteAnswer(params: DeleteAnswerParams): Promise<ActionResponse> {
   const validationResult = await action({
     params,
     schema: DeleteAnswerSchema,
@@ -183,14 +179,21 @@ export async function deleteAnswer(
 
     const questionId = answer.question.toString();
 
-    await Question.findByIdAndUpdate(
-      questionId,
-      { $inc: { answers: -1 } },
-      { session }
-    );
+    await Question.findByIdAndUpdate(questionId, { $inc: { answers: -1 } }, { session });
 
     // Delete the answer
     await Answer.findByIdAndDelete(answerId).session(session);
+
+    // log the interaction
+    after(async () => {
+      await createInteraction({
+        action: "delete",
+        actionId: answerId,
+        actionTarget: "answer",
+        authorId: userId as string,
+      });
+    });
+
     await session.commitTransaction();
     await session.endSession();
 

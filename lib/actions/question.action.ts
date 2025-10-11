@@ -2,12 +2,7 @@
 
 import mongoose, { FilterQuery } from "mongoose";
 
-import {
-  ActionResponse,
-  ErrorResponse,
-  PaginatedSearchParams,
-  Question as QuestionType,
-} from "@/types/global";
+import { ActionResponse, ErrorResponse, PaginatedSearchParams, Question as QuestionType } from "@/types/global";
 import action from "../handlers/action";
 import {
   AskQuestionSchema,
@@ -32,10 +27,10 @@ import { revalidatePath } from "next/cache";
 // import ROUTES from "@/constants/routes";
 import dbConnect from "../mongoose";
 import { Answer, Collection, Vote } from "@/database";
+import { after } from "next/server";
+import { createInteraction } from "./interaction.action";
 
-export async function createQuestion(
-  params: CreateQuestionParams
-): Promise<ActionResponse<IQuestionDoc>> {
+export async function createQuestion(params: CreateQuestionParams): Promise<ActionResponse<IQuestionDoc>> {
   const validationResult = await action({
     params,
     schema: AskQuestionSchema,
@@ -89,11 +84,17 @@ export async function createQuestion(
 
     await TagQuestion.insertMany(tagQuestionDocuments, { session });
 
-    await Question.findByIdAndUpdate(
-      { _id: question._id },
-      { $push: { tags: { $each: tagIds } } },
-      { session }
-    );
+    await Question.findByIdAndUpdate({ _id: question._id }, { $push: { tags: { $each: tagIds } } }, { session });
+
+    // log the transaction
+    after(async () => {
+      await createInteraction({
+        action: "post",
+        actionId: question._id.toString(),
+        actionTarget: "question",
+        authorId: userId as string,
+      });
+    });
 
     await session.commitTransaction();
 
@@ -106,9 +107,7 @@ export async function createQuestion(
   }
 }
 
-export async function editQuestion(
-  params: EditQuestionParams
-): Promise<ActionResponse<IQuestionDoc>> {
+export async function editQuestion(params: EditQuestionParams): Promise<ActionResponse<IQuestionDoc>> {
   const validationResult = await action({
     params,
     schema: EditQuestionSchema,
@@ -142,15 +141,11 @@ export async function editQuestion(
     }
 
     const tagsToAdd = tags.filter(
-      (tag) =>
-        !question.tags.some((t: ITagDoc) =>
-          t.name.toLowerCase().includes(tag.toLowerCase())
-        )
+      (tag) => !question.tags.some((t: ITagDoc) => t.name.toLowerCase().includes(tag.toLowerCase()))
     );
 
     const tagsToRemove = question.tags.filter(
-      (tag: ITagDoc) =>
-        !tags.some((t) => t.toLowerCase() === tag.name.toLowerCase())
+      (tag: ITagDoc) => !tags.some((t) => t.toLowerCase() === tag.name.toLowerCase())
     );
 
     const newTagDocuments = [];
@@ -179,22 +174,12 @@ export async function editQuestion(
     if (tagsToRemove.length > 0) {
       const tagIdsToRemove = tagsToRemove.map((tag: ITagDoc) => tag._id);
 
-      await Tag.updateMany(
-        { _id: { $in: tagsToRemove } },
-        { $inc: { questions: -1 } },
-        { session }
-      );
+      await Tag.updateMany({ _id: { $in: tagsToRemove } }, { $inc: { questions: -1 } }, { session });
 
-      await TagQuestion.deleteMany(
-        { tag: { $in: tagIdsToRemove }, question: questionId },
-        { session }
-      );
+      await TagQuestion.deleteMany({ tag: { $in: tagIdsToRemove }, question: questionId }, { session });
 
       question.tags = question.tags.filter(
-        (tag: mongoose.Types.ObjectId) =>
-          !tagIdsToRemove.some((id: mongoose.Types.ObjectId) =>
-            id.equals(tag._id)
-          )
+        (tag: mongoose.Types.ObjectId) => !tagIdsToRemove.some((id: mongoose.Types.ObjectId) => id.equals(tag._id))
       );
     }
 
@@ -214,9 +199,7 @@ export async function editQuestion(
   }
 }
 
-export async function getQuestion(
-  params: GetQuestionParams
-): Promise<ActionResponse<IQuestionDoc>> {
+export async function getQuestion(params: GetQuestionParams): Promise<ActionResponse<IQuestionDoc>> {
   const validationResult = await action({
     params,
     schema: GetQuestionSchema,
@@ -230,9 +213,7 @@ export async function getQuestion(
   const { questionId } = validationResult.params!;
 
   try {
-    const question = await Question.findById(questionId)
-      .populate("tags")
-      .populate("author", "_id name image");
+    const question = await Question.findById(questionId).populate("tags").populate("author", "_id name image");
 
     if (!question) {
       throw new Error("Question not found.");
@@ -262,14 +243,10 @@ export async function getQuestions(
 
   const filterQuery: FilterQuery<typeof Question> = {};
 
-  if (filter === "recommended")
-    return { success: true, data: { questions: [], isNext: false } };
+  if (filter === "recommended") return { success: true, data: { questions: [], isNext: false } };
 
   if (query) {
-    filterQuery.$or = [
-      { title: { $regex: new RegExp(query, "i") } },
-      { content: { $regex: new RegExp(query, "i") } },
-    ];
+    filterQuery.$or = [{ title: { $regex: new RegExp(query, "i") } }, { content: { $regex: new RegExp(query, "i") } }];
   }
 
   let sortCriteria = {};
@@ -312,9 +289,7 @@ export async function getQuestions(
   }
 }
 
-export async function incrementViews(
-  params: IncrementViewsParams
-): Promise<ActionResponse<{ views: number }>> {
+export async function incrementViews(params: IncrementViewsParams): Promise<ActionResponse<{ views: number }>> {
   const validationResult = await action({
     params,
     schema: IncrementViewsSchema,
@@ -341,14 +316,10 @@ export async function incrementViews(
   }
 }
 
-export async function getHotQuestions(): Promise<
-  ActionResponse<QuestionType[]>
-> {
+export async function getHotQuestions(): Promise<ActionResponse<QuestionType[]>> {
   try {
     await dbConnect();
-    const questions = await Question.find()
-      .sort({ views: -1, upvotes: -1 })
-      .limit(5);
+    const questions = await Question.find().sort({ views: -1, upvotes: -1 }).limit(5);
 
     return {
       success: true,
@@ -359,9 +330,7 @@ export async function getHotQuestions(): Promise<
   }
 }
 
-export async function deleteQuestion(
-  params: DeleteQuestionParams
-): Promise<ActionResponse> {
+export async function deleteQuestion(params: DeleteQuestionParams): Promise<ActionResponse> {
   const validationResult = await action({
     params,
     schema: DeleteQuestionSchema,
@@ -396,11 +365,7 @@ export async function deleteQuestion(
 
     // For all tags of question, find them and reduce their count
     if (question.tags.length > 0) {
-      await Tag.updateMany(
-        { _id: { $in: question.tags } },
-        { $inc: { questions: -1 } },
-        { session }
-      );
+      await Tag.updateMany({ _id: { $in: question.tags } }, { $inc: { questions: -1 } }, { session });
     }
 
     // Remove all votes of the question
@@ -410,9 +375,7 @@ export async function deleteQuestion(
     }).session(session);
 
     // remove all answers and their votes of the question
-    const answers = await Answer.find({ question: questionId }).session(
-      session
-    );
+    const answers = await Answer.find({ question: questionId }).session(session);
 
     if (answers.length > 0) {
       await Answer.deleteMany({ question: questionId }).session(session);
@@ -424,6 +387,15 @@ export async function deleteQuestion(
 
     // Delete the question
     await Question.findByIdAndDelete(questionId).session(session);
+
+    after(async () => {
+      await createInteraction({
+        action: "delete",
+        actionId: questionId,
+        actionTarget: "question",
+        authorId: userId as string,
+      });
+    });
 
     await session.commitTransaction();
     await session.endSession();
