@@ -1,12 +1,7 @@
 import { auth } from "@/auth";
 import ProfileLink from "@/components/user/ProfileLink";
 import UserAvatar from "@/components/UserAvatar";
-import {
-  getUser,
-  getUserAnswers,
-  getUserQuestions,
-  getUserTopTags,
-} from "@/lib/actions/user.action";
+import { getUser, getUserAnswers, getUserQuestions, getUserTopTags } from "@/lib/actions/user.action";
 import { RouteParams } from "@/types/global";
 import { notFound } from "next/navigation";
 import dayjs from "dayjs";
@@ -33,9 +28,7 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
   });
 
   if (!success) {
-    return (
-      <div className="h1-bold text-dark100_light900">{error?.message}</div>
-    );
+    return <div className="h1-bold text-dark100_light900">{error?.message}</div>;
   }
 
   const {
@@ -71,8 +64,7 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
   const { tags } = userTopTags!;
 
   const { user, totalQuestions, totalAnswers } = data!;
-  const { _id, name, image, createdAt, username, bio, location, portfolio } =
-    user;
+  const { _id, name, image, createdAt, username, bio, location, portfolio } = user;
 
   return (
     <>
@@ -88,9 +80,7 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
 
           <div className="mt-3">
             <h2 className="h2-bold text-dark100_light900">{name}</h2>
-            <p className="paragraph-regular text-dark200_light800">
-              @{username}
-            </p>
+            <p className="paragraph-regular text-dark200_light800">@{username}</p>
 
             <div className="mt-5 flex flex-wrap items-center justify-start gap-5">
               {portfolio && (
@@ -101,7 +91,10 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
                 />
               )}
               {location && (
-                <ProfileLink imgUrl="/icons/location.svg" title="Location" />
+                <ProfileLink
+                  imgUrl="/icons/location.svg"
+                  title="Location"
+                />
               )}
 
               <ProfileLink
@@ -110,11 +103,7 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
               />
             </div>
 
-            {bio && (
-              <p className="paragraph-regular text-dark400_light800 mt-8">
-                {bio}
-              </p>
-            )}
+            {bio && <p className="paragraph-regular text-dark400_light800 mt-8">{bio}</p>}
           </div>
         </div>
 
@@ -136,15 +125,25 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
           SILVER: 0,
           BRONZE: 0,
         }}
+        reputationPoints={user.reputation || 0}
       />
 
       <section className="mt-10 flex gap-10">
-        <Tabs defaultValue="top-posts" className="flex-[2]">
+        <Tabs
+          defaultValue="top-posts"
+          className="flex-[2]"
+        >
           <TabsList className="background-light800_dark300 min-h-[42px] p-1">
-            <TabsTrigger value="top-posts" className="tab">
+            <TabsTrigger
+              value="top-posts"
+              className="tab"
+            >
               Top Posts
             </TabsTrigger>
-            <TabsTrigger value="answers" className="tab">
+            <TabsTrigger
+              value="answers"
+              className="tab"
+            >
               Answers
             </TabsTrigger>
           </TabsList>
@@ -164,19 +163,23 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
                     <QuestionCard
                       key={question._id}
                       question={question}
-                      showActionBtns={
-                        loggedInUser?.user?.id === question.author._id
-                      }
+                      showActionBtns={loggedInUser?.user?.id === question.author._id}
                     />
                   ))}
                 </div>
               )}
             />
 
-            <Pagination page={page} isNext={hasMoreQuestions || false} />
+            <Pagination
+              page={page}
+              isNext={hasMoreQuestions || false}
+            />
           </TabsContent>
 
-          <TabsContent value="answers" className="flex w-full flex-col gap-6">
+          <TabsContent
+            value="answers"
+            className="flex w-full flex-col gap-6"
+          >
             <DataRenderer
               success={userAnswersSuccess}
               error={userAnswersError}
@@ -191,16 +194,17 @@ const Profile = async ({ params, searchParams }: RouteParams) => {
                       content={answer.content.slice(0, 270)}
                       containerClasses="card-wrapper rounded-[10px] px-7 py-9 sm:px-11"
                       showReadMore
-                      showActionBtns={
-                        loggedInUser?.user?.id === answer.author._id
-                      }
+                      showActionBtns={loggedInUser?.user?.id === answer.author._id}
                     />
                   ))}
                 </div>
               )}
             />
 
-            <Pagination page={page} isNext={hasMoreAnswers || false} />
+            <Pagination
+              page={page}
+              isNext={hasMoreAnswers || false}
+            />
           </TabsContent>
         </Tabs>
 
