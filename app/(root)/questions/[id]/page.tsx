@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: RouteParams): Promise<Metadat
 
   return {
     title: question.title,
-    description: question.content.slice(0, 100), // First 160 characters of content
+    description: question.content.slice(0, 100), // First 100 characters of content
     twitter: {
       card: "summary_large_image",
       title: question.title,
@@ -73,15 +73,15 @@ const QuestionDetails = async ({ params, searchParams }: RouteParams) => {
   });
 
   const hasVotedPromise = hasVoted({
-    targetId: question._id,
+    targetId: question._id as string,
     targetType: "question",
   });
 
   const hasSavedQuestionPromise = hasSavedQuestion({
-    questionId: question._id,
+    questionId: question._id as string,
   });
 
-  const { title, author, content, answers, views, tags, createdAt } = question;
+  const { title, author, content, answers, views, tags, createdAt } = question as any;
   return (
     <>
       {/* <View questionId={id} /> [View Approach 01] */}
@@ -89,14 +89,14 @@ const QuestionDetails = async ({ params, searchParams }: RouteParams) => {
         <div className="flex w-full flex-col-reverse justify-between">
           <div className="flex items-center justify-start gap-1">
             <UserAvatar
-              id={author._id}
+              id={author._id as string}
               name={author.name}
               imageUrl={author.image || ""}
               className="size-6"
               fallbackClassName="text-[10px]"
             />
 
-            <Link href={ROUTES.PROFILE(author._id)}>
+            <Link href={ROUTES.PROFILE(author._id as string)}>
               <p className="paragraph-semibold text-dark300_light700">{author.name}</p>
             </Link>
           </div>
@@ -107,14 +107,14 @@ const QuestionDetails = async ({ params, searchParams }: RouteParams) => {
                 upvotes={question.upvotes}
                 downvotes={question.downvotes}
                 targetType="question"
-                targetId={question._id}
+                targetId={question._id as string}
                 hasVotedPromise={hasVotedPromise}
               />
             </Suspense>
 
             <Suspense fallback={<div>Loading...</div>}>
               <SaveQuestion
-                questionId={question._id}
+                questionId={question._id as string}
                 hasSavedQuestionPromise={hasSavedQuestionPromise}
               />
             </Suspense>

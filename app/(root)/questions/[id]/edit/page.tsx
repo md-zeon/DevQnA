@@ -17,12 +17,12 @@ const EditQuestion = async ({ params }: RouteParams) => {
 
   if (!success) return notFound();
 
-  if (question?.author?._id?.toString() !== session?.user?.id)
+  if (question?.author?.toString() !== session?.user?.id)
     redirect(ROUTES.QUESTION(id));
 
   return (
     <main>
-      <QuestionForm question={question} isEdit />
+      <QuestionForm question={question as any} isEdit />
     </main>
   );
 };

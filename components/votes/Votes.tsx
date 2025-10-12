@@ -31,7 +31,7 @@ const Votes = ({
 
   const { success, data } = use(hasVotedPromise);
 
-  const { hasUpvoted, hasDownvoted } = data;
+  const { hasUpvoted, hasDownvoted } = data || { hasUpvoted: false, hasDownvoted: false };
 
   const handleVote = async (voteType: "upvote" | "downvote") => {
     if (!userId) {

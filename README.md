@@ -444,6 +444,7 @@ npm run dev
 - **[👥 User Guide](docs/user-guide.md)** - How to use the DevQnA platform effectively
 - **[🔧 Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
 - **[📝 Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
+- **[🐛 Build Errors Tracking](docs/build-errors-tracking.md)** - Detailed analysis of build issues and solutions
 
 #### External Documentation
 

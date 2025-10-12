@@ -9,6 +9,7 @@ import { HomePageFilters } from "@/constants/filters";
 import ROUTES from "@/constants/routes";
 import { EMPTY_QUESTION } from "@/constants/states";
 import { getQuestions } from "@/lib/actions/question.action";
+import { Question } from "@/types/global";
 import Link from "next/link";
 
 interface SearchParams {
@@ -25,7 +26,7 @@ const Home = async ({ searchParams }: SearchParams) => {
     filter: filter || "",
   });
 
-  const questions = data?.questions || [];
+  const questions: Question[] = (data?.questions || []) as unknown as Question[];
   const isNext = data?.isNext || false;
 
   return (

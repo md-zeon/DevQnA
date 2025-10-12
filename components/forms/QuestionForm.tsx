@@ -81,7 +81,7 @@ const QuestionForm = ({ question, isEdit = false }: Params) => {
           });
 
           if (result.data) {
-            router.push(ROUTES.QUESTION(result.data?._id));
+            router.push(ROUTES.QUESTION((result.data as any)?._id));
           }
         } else {
           toast(`Error ${result.status}`, {
@@ -97,7 +97,7 @@ const QuestionForm = ({ question, isEdit = false }: Params) => {
           });
 
           if (result.data) {
-            router.push(ROUTES.QUESTION(result.data?._id));
+            router.push(ROUTES.QUESTION((result.data as any)?._id));
           }
         } else {
           toast(`Error ${result.status}`, {
