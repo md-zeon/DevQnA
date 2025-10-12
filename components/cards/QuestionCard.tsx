@@ -12,17 +12,7 @@ interface Props {
 }
 
 const QuestionCard = ({
-  question: {
-    _id,
-    title,
-    description,
-    tags,
-    author,
-    upvotes,
-    answers,
-    views,
-    createdAt,
-  },
+  question: { _id, title, tags, author, upvotes, answers, views, createdAt },
   showActionBtns = false,
 }: Props) => {
   return (
@@ -37,12 +27,22 @@ const QuestionCard = ({
             <Link href={ROUTES.QUESTION(_id)}>{title}</Link>
           </h3>
         </div>
-        {showActionBtns && <EditDeleteAction type="Question" itemId={_id} />}
+        {showActionBtns && (
+          <EditDeleteAction
+            type="Question"
+            itemId={_id}
+          />
+        )}
       </div>
 
       <div className="mt-3.5 flex w-full flex-wrap gap-2">
         {tags.map((tag: Tag) => (
-          <TagCard key={tag._id} _id={tag._id} name={tag.name} compact />
+          <TagCard
+            key={tag._id}
+            _id={tag._id}
+            name={tag.name}
+            compact
+          />
         ))}
       </div>
 
