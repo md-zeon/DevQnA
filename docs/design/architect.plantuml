@@ -1,0 +1,53 @@
+@startuml DevQnA Architecture
+!define AWSPUML https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v19.0/dist
+!include AWSPUML/AWSCommon.puml
+!include AWSPUML/InternetOfThings/IoTCore.puml
+!include AWSPUML/ApplicationIntegration/SimpleQueueService.puml
+!include AWSPUML/Database/DynamoDB.puml
+
+' Define custom components
+package "Client Layer" as Client {
+    component [Next.js Frontend] as Frontend
+    component [React Components] as Components
+    component [Tailwind CSS] as Styling
+}
+
+package "API Layer" as API {
+    component [Next.js API Routes] as APIRoutes
+    component [NextAuth.js] as Auth
+    component [Server Actions] as Actions
+}
+
+package "Data Layer" as Data {
+    database [MongoDB] as MongoDB
+    component [Mongoose ODM] as Mongoose
+}
+
+package "External Services" as External {
+    component [OAuth Providers] as OAuth
+    component [Job Search API] as JobsAPI
+    component [AI Services] as AI
+}
+
+' Relationships
+Frontend -> APIRoutes : HTTP/HTTPS
+APIRoutes -> Auth : Authentication
+APIRoutes -> Actions : Business Logic
+Actions -> Mongoose : Data Operations
+Mongoose -> MongoDB : Database Queries
+APIRoutes -> OAuth : Social Login
+APIRoutes -> JobsAPI : Job Data
+APIRoutes -> AI : AI Features
+
+' Styling
+title DevQnA - System Architecture
+
+legend right
+    |= Component |= Description |
+    | Next.js Frontend | React-based user interface |
+    | API Routes | RESTful API endpoints |
+    | MongoDB | NoSQL database |
+    | External APIs | Third-party integrations |
+endlegend
+
+@enduml

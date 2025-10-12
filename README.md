@@ -393,6 +393,66 @@ npm run dev
 - ✅ **Enhanced search** with global search functionality
 - ✅ **Job board** integration with external APIs
 
+## 📚 Documentation
+
+### 📖 Technical Documentation
+
+#### System Design Documents
+
+- **[📋 Preliminary Design Review (PDR)](docs/design/pdr.md)** - Complete design review and architecture decisions
+- **[🏗️ System Design Document](docs/design/system_design.md)** - Detailed technical specifications and architecture
+- **[📊 Project File Structure](docs/design/file_tree.md)** - Visual representation of the entire codebase
+
+#### Architecture Diagrams (PlantUML)
+
+- **[🏛️ System Architecture](docs/design/architect.plantuml)** - High-level system architecture diagram
+- **[🔗 Class Diagram](docs/design/class_diagram.plantuml)** - Database models and class relationships
+- **[🗄️ ER Diagram](docs/design/er_diagram.plantuml)** - Entity relationship diagram with database schema
+- **[🔄 Sequence Diagram](docs/design/sequence_diagram.plantuml)** - User interaction flows and system sequences
+- **[🧭 UI Navigation Flow](docs/design/ui_navigation.plantuml)** - User interface navigation and state flows
+
+#### API Documentation
+
+- **RESTful API Structure** - Complete endpoint documentation
+- **Authentication Flow** - OAuth and session management details
+- **Database Schema** - MongoDB collections and relationships
+- **Error Handling** - Standardized error response formats
+
+### 🚀 Quick Start Guides
+
+#### For Developers
+
+1. **Environment Setup** - Configure MongoDB and OAuth providers
+2. **Local Development** - Run the development server with hot reload
+3. **Database Seeding** - Set up initial data for testing
+4. **Testing** - Run the test suite and verify functionality
+
+#### For Contributors
+
+1. **Fork & Clone** - Create your own copy of the repository
+2. **Feature Branch** - Create a branch for your changes
+3. **Development** - Implement features following project patterns
+4. **Testing** - Write tests for new functionality
+5. **Pull Request** - Submit changes for review
+
+### 📖 Additional Resources
+
+#### Platform Documentation
+
+- **[📋 API Endpoints](docs/api-endpoints.md)** - Complete API reference and examples
+- **[🚀 Deployment Guide](docs/deployment-guide.md)** - Step-by-step deployment instructions
+- **[👥 User Guide](docs/user-guide.md)** - How to use the DevQnA platform effectively
+- **[🔧 Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
+- **[📝 Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
+
+#### External Documentation
+
+- **[Next.js Documentation](https://nextjs.org/docs)** - Framework documentation
+- **[MongoDB Guide](https://docs.mongodb.com/)** - Database documentation
+- **[NextAuth.js Docs](https://next-auth.js.org/)** - Authentication guide
+- **[Tailwind CSS](https://tailwindcss.com/docs)** - Styling framework
+- **[TypeScript Handbook](https://www.typescriptlang.org/docs/)** - Type safety guide
+
 ## 📞 Support & Community
 
 ### Getting Help

@@ -1,0 +1,209 @@
+@startuml DevQnA ER Diagram
+
+' Entities
+entity "users" as users {
+    * _id: ObjectId PK
+    --
+    name: string
+    username: string
+    email: string
+    image: string
+    reputation: number
+    badge: string
+    joinedAt: Date
+    isExpert: boolean
+    bio: string
+    location: string
+    website: string
+    github: string
+    linkedin: string
+    skills: string[]
+    preferences: Object
+}
+
+entity "accounts" as accounts {
+    * _id: ObjectId PK
+    --
+    * userId: ObjectId FK
+    provider: string
+    providerAccountId: string
+    password: string
+    isVerified: boolean
+    createdAt: Date
+}
+
+entity "questions" as questions {
+    * _id: ObjectId PK
+    --
+    * title: string
+    * content: string
+    * author: ObjectId FK
+    views: number
+    upvotes: number
+    downvotes: number
+    answers: number
+    isResolved: boolean
+    acceptedAnswer: ObjectId FK
+    createdAt: Date
+    updatedAt: Date
+    attachments: string[]
+    codeSnippet: string
+    difficulty: string
+}
+
+entity "answers" as answers {
+    * _id: ObjectId PK
+    --
+    * content: string
+    * question: ObjectId FK
+    * author: ObjectId FK
+    upvotes: number
+    downvotes: number
+    isAccepted: boolean
+    createdAt: Date
+    updatedAt: Date
+    attachments: string[]
+    codeSnippet: string
+}
+
+entity "tags" as tags {
+    * _id: ObjectId PK
+    --
+    * name: string
+    description: string
+    color: string
+    icon: string
+    usageCount: number
+    createdBy: ObjectId FK
+    isOfficial: boolean
+    category: string
+    relatedTags: ObjectId[] FK
+}
+
+entity "tag_questions" as tag_questions {
+    * _id: ObjectId PK
+    --
+    * tag: ObjectId FK
+    * question: ObjectId FK
+}
+
+entity "votes" as votes {
+    * _id: ObjectId PK
+    --
+    * user: ObjectId FK
+    targetType: string
+    * targetId: ObjectId
+    voteType: string
+    createdAt: Date
+}
+
+entity "collections" as collections {
+    * _id: ObjectId PK
+    --
+    * name: string
+    description: string
+    * user: ObjectId FK
+    questions: ObjectId[] FK
+    isPublic: boolean
+    tags: ObjectId[] FK
+    createdAt: Date
+    updatedAt: Date
+}
+
+entity "interactions" as interactions {
+    * _id: ObjectId PK
+    --
+    * user: ObjectId FK
+    targetType: string
+    * targetId: ObjectId
+    interactionType: string
+    metadata: Object
+    createdAt: Date
+}
+
+entity "jobs" as jobs {
+    * _id: ObjectId PK
+    --
+    * title: string
+    company: string
+    location: string
+    type: string
+    salary: string
+    description: string
+    requirements: string[]
+    benefits: string[]
+    tags: ObjectId[] FK
+    isActive: boolean
+    expiresAt: Date
+    createdAt: Date
+}
+
+entity "notifications" as notifications {
+    * _id: ObjectId PK
+    --
+    * user: ObjectId FK
+    type: string
+    title: string
+    message: string
+    isRead: boolean
+    createdAt: Date
+}
+
+entity "badges" as badges {
+    * _id: ObjectId PK
+    --
+    name: string
+    description: string
+    icon: string
+    requirement: Object
+    rarity: string
+}
+
+entity "user_badges" as user_badges {
+    * _id: ObjectId PK
+    --
+    * user: ObjectId FK
+    * badge: ObjectId FK
+    earnedAt: Date
+}
+
+' Relationships
+users ||--o{ accounts : "has one"
+users ||--o{ questions : "posts many"
+users ||--o{ answers : "writes many"
+users ||--o{ votes : "casts many"
+users ||--o{ collections : "owns many"
+users ||--o{ interactions : "performs many"
+users ||--o{ notifications : "receives many"
+users ||--o{ user_badges : "earns many"
+
+questions }o--o{ answers : "has many"
+questions }o--|| users : "has one accepted answer author"
+questions }o--o{ tag_questions : "categorized by many"
+questions }o--o{ collections : "saved in many"
+questions }o--o{ votes : "voted on by many"
+questions }o--o{ interactions : "interacted with by many"
+
+answers }o--o{ votes : "voted on by many"
+answers }o--o{ interactions : "interacted with by many"
+
+tags ||--o{ tag_questions : "categorizes many"
+tags }o--o{ jobs : "used in many"
+tags ||--o{ users : "created by"
+tags }o--o{ tags : "related to many"
+
+jobs }o--o{ interactions : "interacted with by many"
+
+badges ||--o{ user_badges : "earned by many"
+
+' Styling
+title DevQnA - Entity Relationship Diagram
+
+legend right
+    |= Color |= Relationship |
+    | Blue | One to Many |
+    | Green | Many to Many |
+    | Red | One to One |
+endlegend
+
+@enduml

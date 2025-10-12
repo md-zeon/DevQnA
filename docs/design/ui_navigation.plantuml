@@ -1,0 +1,125 @@
+@startuml DevQnA UI Navigation Flow
+
+!define AWSPUML https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v19.0/dist
+!include AWSPUML/AWSCommon.puml
+
+' User states
+state "Anonymous User" as Anonymous
+state "Authenticated User" as Authenticated
+state "Expert User" as Expert
+
+' Main pages
+state "Landing Page" as Landing
+state "Sign In/Up" as AuthPages
+state "Home Feed" as Home
+state "Question Detail" as QuestionDetail
+state "Ask Question" as AskQuestion
+state "User Profile" as Profile
+state "Collections" as Collections
+state "Jobs Board" as Jobs
+state "Tags Page" as Tags
+state "Community" as Community
+
+' Navigation flows
+Anonymous --> AuthPages : Click Login/Signup
+AuthPages --> Home : Successful Auth
+Home --> QuestionDetail : Click Question
+Home --> AskQuestion : Click "Ask Question"
+Home --> Profile : Click User Avatar
+Home --> Collections : Click Collections
+Home --> Jobs : Click Jobs
+Home --> Tags : Click Tags
+Home --> Community : Click Community
+
+QuestionDetail --> Home : Back to Feed
+QuestionDetail --> Profile : Click Author
+QuestionDetail --> AskQuestion : Ask Related Question
+
+AskQuestion --> Home : Question Posted
+AskQuestion --> QuestionDetail : Preview Question
+
+Profile --> Home : Back to Feed
+Profile --> Collections : View User Collections
+Profile --> QuestionDetail : Click User Question
+
+Collections --> Home : Back to Feed
+Collections --> QuestionDetail : Open Saved Question
+
+Jobs --> Home : Back to Feed
+Jobs --> QuestionDetail : Related Questions
+
+Tags --> Home : Back to Feed
+Tags --> QuestionDetail : Browse Tag Questions
+
+Community --> Home : Back to Feed
+
+' Special states
+state "Search Results" as Search
+state "Filter View" as FilterView
+state "Admin Panel" as Admin
+
+Home --> Search : Use Search Bar
+Search --> QuestionDetail : Select Result
+Search --> Home : Clear Search
+
+Home --> FilterView : Apply Filters
+FilterView --> QuestionDetail : Select Filtered Question
+FilterView --> Home : Clear Filters
+
+Expert --> Admin : Admin Access
+Admin --> Home : Return to Site
+
+' Mobile navigation
+state "Mobile Menu" as MobileMenu
+state "Mobile Search" as MobileSearch
+
+Authenticated --> MobileMenu : Hamburger Menu (Mobile)
+MobileMenu --> Home : Navigate Home
+MobileMenu --> Profile : Navigate Profile
+MobileMenu --> Collections : Navigate Collections
+MobileMenu --> AskQuestion : Navigate Ask Question
+
+Home --> MobileSearch : Search Icon (Mobile)
+MobileSearch --> Search : Enter Query
+
+' Error states
+state "404 Not Found" as Error404
+state "500 Server Error" as Error500
+state "Network Error" as NetworkError
+
+[*] --> Error404 : Invalid URL
+Error404 --> Home : Go Home
+
+[*] --> Error500 : Server Issue
+Error500 --> Home : Retry
+
+NetworkError --> Home : Connection Restored
+
+' Styling
+title DevQnA - User Interface Navigation Flow
+
+legend right
+    |= State Type |= Description |
+    | Public Pages | Accessible without authentication |
+    | User Pages | Require authentication |
+    | Special States | Search, filters, admin |
+    | Error States | Error handling flows |
+    | Mobile Views | Mobile-specific navigation |
+endlegend
+
+note right of Home : Main hub for all user activities
+- Browse questions
+- Access all features
+- Search and filter content
+
+note right of QuestionDetail : Central content view
+- Full question display
+- Answer interaction
+- Related content suggestions
+
+note bottom of AuthPages : Supports multiple auth methods
+- GitHub OAuth
+- Google OAuth
+- Email/Password
+
+@enduml

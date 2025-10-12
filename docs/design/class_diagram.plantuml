@@ -1,0 +1,186 @@
+@startuml DevQnA Class Diagram
+
+' Main entities
+class User {
+    +_id: ObjectId
+    +name: string
+    +username: string
+    +email: string
+    +image: string
+    +reputation: number
+    +badge: string
+    +joinedAt: Date
+    +isExpert: boolean
+    +bio: string
+    +location: string
+    +website: string
+    +github: string
+    +linkedin: string
+    +skills: string[]
+    +preferences: Object
+}
+
+class Question {
+    +_id: ObjectId
+    +title: string
+    +content: string
+    +tags: ObjectId[]
+    +author: ObjectId
+    +views: number
+    +upvotes: number
+    +downvotes: number
+    +answers: number
+    +isResolved: boolean
+    +acceptedAnswer: ObjectId
+    +createdAt: Date
+    +updatedAt: Date
+    +attachments: string[]
+    +codeSnippet: string
+    +difficulty: string
+}
+
+class Answer {
+    +_id: ObjectId
+    +content: string
+    +question: ObjectId
+    +author: ObjectId
+    +upvotes: number
+    +downvotes: number
+    +isAccepted: boolean
+    +createdAt: Date
+    +updatedAt: Date
+    +attachments: string[]
+    +codeSnippet: string
+}
+
+class Tag {
+    +_id: ObjectId
+    +name: string
+    +description: string
+    +color: string
+    +icon: string
+    +usageCount: number
+    +createdBy: ObjectId
+    +isOfficial: boolean
+    +category: string
+    +relatedTags: ObjectId[]
+}
+
+class Vote {
+    +_id: ObjectId
+    +user: ObjectId
+    +targetType: string
+    +targetId: ObjectId
+    +voteType: string
+    +createdAt: Date
+}
+
+class Collection {
+    +_id: ObjectId
+    +name: string
+    +description: string
+    +user: ObjectId
+    +questions: ObjectId[]
+    +isPublic: boolean
+    +tags: ObjectId[]
+    +createdAt: Date
+    +updatedAt: Date
+}
+
+class Interaction {
+    +_id: ObjectId
+    +user: ObjectId
+    +targetType: string
+    +targetId: ObjectId
+    +interactionType: string
+    +metadata: Object
+    +createdAt: Date
+}
+
+class Job {
+    +_id: ObjectId
+    +title: string
+    +company: string
+    +location: string
+    +type: string
+    +salary: string
+    +description: string
+    +requirements: string[]
+    +benefits: string[]
+    +tags: ObjectId[]
+    +isActive: boolean
+    +expiresAt: Date
+    +createdAt: Date
+}
+
+class Account {
+    +_id: ObjectId
+    +userId: ObjectId
+    +provider: string
+    +providerAccountId: string
+    +password: string
+    +isVerified: boolean
+    +createdAt: Date
+}
+
+' Relationships
+User "1" -- "0..*" Question : author
+User "1" -- "0..*" Answer : author
+User "1" -- "0..*" Vote : user
+User "1" -- "0..*" Collection : owner
+User "1" -- "1" Account : account
+
+Question "1" -- "0..*" Answer : question
+Question "0..*" -- "0..*" Tag : tags
+Question "0..*" -- "0..*" Collection : questions
+
+Answer "1" -- "0..*" Vote : target
+Question "1" -- "0..*" Vote : target
+
+Tag "1" -- "0..*" Question : tags
+Tag "1" -- "0..*" Job : tags
+
+Interaction "0..*" -- "1" User : user
+Interaction "0..*" -- "1" Question : target
+Interaction "0..*" -- "1" Answer : target
+
+' Inheritance and interfaces
+class Notification {
+    +_id: ObjectId
+    +user: ObjectId
+    +type: string
+    +title: string
+    +message: string
+    +isRead: boolean
+    +createdAt: Date
+}
+
+class Badge {
+    +_id: ObjectId
+    +name: string
+    +description: string
+    +icon: string
+    +requirement: Object
+    +rarity: string
+}
+
+User "0..*" -- "0..*" Badge : earned_badges
+
+' Aggregations
+Question "1" -- "1" User : accepted_answer_author
+
+title DevQnA - Class Diagram
+
+legend right
+    |= Entity |= Description |
+    | User | Developer account and profile |
+    | Question | Technical question posted by users |
+    | Answer | Response to questions |
+    | Tag | Technology categorization |
+    | Vote | User voting on content |
+    | Collection | Saved questions by users |
+    | Interaction | User activity tracking |
+    | Job | Job postings and opportunities |
+endlegend
+
+@enduml

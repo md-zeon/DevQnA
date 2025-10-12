@@ -1,0 +1,153 @@
+@startuml DevQnA User Interaction Sequences
+
+!define AWSPUML https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v19.0/dist
+!include AWSPUML/AWSCommon.puml
+
+' Participants
+actor "User" as U
+participant "Frontend" as F
+participant "NextAuth" as NA
+participant "API Routes" as API
+participant "Server Actions" as SA
+participant "Database" as DB
+participant "External APIs" as EXT
+
+' Sequence 1: User Registration/Login
+== User Authentication Flow ==
+
+U -> F: Click "Sign Up" or "Login"
+F -> NA: Initiate OAuth/GitHub/Google
+NA -> EXT: Redirect to OAuth Provider
+EXT -> U: Authentication Page
+U -> EXT: Enter Credentials
+EXT -> NA: Return Auth Token
+NA -> DB: Create/Update User Account
+NA -> F: Return Session Token
+F -> U: Redirect to Dashboard
+
+' Sequence 2: Ask Question Flow
+== Ask Question Flow ==
+
+U -> F: Click "Ask Question"
+F -> F: Display Question Form
+U -> F: Fill Question Details
+U -> F: Add Tags
+U -> F: Submit Question
+F -> API: POST /api/questions
+API -> SA: Validate & Process
+SA -> DB: Save Question
+SA -> DB: Update Tag Usage
+DB -> SA: Return Question ID
+SA -> API: Return Success Response
+API -> F: Return Question Data
+F -> U: Show Question + Success Message
+
+' Sequence 3: Answer Question Flow
+== Answer Question Flow ==
+
+U -> F: Browse Questions
+F -> API: GET /api/questions
+API -> SA: Fetch Questions
+SA -> DB: Query Questions
+DB -> SA: Return Question List
+SA -> API: Return Questions
+API -> F: Display Questions
+
+U -> F: Click on Question
+F -> API: GET /api/questions/[id]
+API -> SA: Fetch Question Details
+SA -> DB: Get Question + Answers
+DB -> SA: Return Complete Data
+SA -> API: Return Question Data
+API -> F: Display Question Page
+
+U -> F: Write Answer
+U -> F: Submit Answer
+F -> API: POST /api/answers
+API -> SA: Validate & Save Answer
+SA -> DB: Save Answer
+SA -> DB: Update Question Answer Count
+DB -> SA: Return Answer ID
+SA -> API: Return Success
+API -> F: Refresh Question Page
+F -> U: Show Updated Question
+
+' Sequence 4: Voting Flow
+== Voting Interaction Flow ==
+
+U -> F: Click Upvote/Downvote
+F -> API: POST /api/votes
+API -> SA: Process Vote
+SA -> DB: Check Existing Vote
+alt Vote Exists
+    DB -> SA: Return Existing Vote
+    SA -> DB: Update Vote Type
+else No Vote Exists
+    SA -> DB: Create New Vote
+end
+SA -> DB: Update Target Score
+DB -> SA: Return Updated Data
+SA -> API: Return Vote Result
+API -> F: Update UI with New Score
+F -> U: Show Vote Animation
+
+' Sequence 5: Search Flow
+== Global Search Flow ==
+
+U -> F: Enter Search Query
+F -> API: GET /api/search?query=...
+API -> SA: Process Search
+SA -> DB: Search Across Models
+SA -> SA: Aggregate Results
+SA -> API: Return Search Results
+API -> F: Display Results
+F -> U: Show Search Results
+
+' Sequence 6: Job Search Flow
+== Job Integration Flow ==
+
+U -> F: Visit Jobs Page
+F -> API: GET /api/jobs
+API -> SA: Fetch User Location
+SA -> EXT: Get Location Data
+EXT -> SA: Return Location
+SA -> EXT: Search Jobs API
+EXT -> SA: Return Job Listings
+SA -> API: Return Jobs with Location
+API -> F: Display Job Listings
+F -> U: Show Relevant Jobs
+
+' Sequence 7: Collection Management
+== Save to Collection Flow ==
+
+U -> F: Click "Save" on Question
+F -> F: Show Collection Options
+U -> F: Select/Create Collection
+F -> API: POST /api/collections/add
+API -> SA: Add to Collection
+SA -> DB: Update Collection
+DB -> SA: Return Updated Collection
+SA -> API: Return Success
+API -> F: Show Confirmation
+F -> U: Update UI State
+
+' Styling and Notes
+title DevQnA - User Interaction Sequence Diagram
+
+legend right
+    |= Flow Type |= Description |
+    | Authentication | User login/signup process |
+    | Content Creation | Asking questions and answers |
+    | Interaction | Voting and engagement |
+    | Search | Finding content |
+    | Integration | External API usage |
+    | Collection | Content organization |
+endlegend
+
+note right of F : All interactions follow
+- RESTful API patterns
+- Proper error handling
+- Input validation
+- Security measures
+
+@enduml
