@@ -4,8 +4,8 @@
 
 - **Document Version**: 1.0
 - **Review Date**: October 2025
-- **Prepared by**: Development Team
-- **Project**: DevQnA - Developer Q&A Platform
+- **Prepared by**: Zeanur Rahaman Zeon
+- **Project**: DevQnA - Developer Q&A Platform (Portfolio Project)
 - **Status**: ✅ Approved
 
 ---
@@ -308,9 +308,11 @@ interface APIResponse<T> {
 
 ## 📞 Contact Information
 
-- **Technical Lead**: Development Team
-- **Product Owner**: Product Team
-- **Review Board**: Architecture Committee
+- **Project Owner**: Zeanur Rahaman Zeon
+- **Email**: zeon.cse@gmail.com
+- **Portfolio**: https://zeon-portfolio.netlify.app/
+- **LinkedIn**: https://www.linkedin.com/in/zeanur-rahaman-zeon/
+- **GitHub**: https://github.com/md-zeon
 
 ---
 

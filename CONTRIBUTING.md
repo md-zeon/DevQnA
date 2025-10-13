@@ -1,8 +1,8 @@
 # Contributing to DevQnA
 
-## 🌟 Welcome Contributors!
+## 🌟 Welcome!
 
-Thank you for your interest in contributing to DevQnA! We welcome contributions from developers of all skill levels. This guide will help you get started with contributing to our project.
+Thank you for your interest in DevQnA! This is a personal portfolio project built by **Zeanur Rahaman Zeon** to showcase full-stack development skills. While this is primarily a personal project, I welcome feedback, suggestions, and constructive input from the developer community.
 
 ## 📋 Table of Contents
 
@@ -721,29 +721,34 @@ _Contributors who have made significant impact on the project will be featured h
 #### 1. **GitHub Issues**
 
 - Bug reports and feature requests
-- Technical discussions
-- Community support
+- Technical questions and discussions
+- Project feedback and suggestions
 
-#### 2. **GitHub Discussions**
+#### 2. **Email Support**
 
-- Q&A about development
-- Platform feedback
-- General discussions
+- **zeon.cse@gmail.com** - Direct contact for questions or collaboration opportunities
+- Perfect for discussing ideas, reporting issues, or exploring the codebase
 
-#### 3. **Email Support**
+#### 3. **Portfolio & LinkedIn**
 
-- **maintainers@devqna.com** - Direct contact for urgent issues
-- **security@devqna.com** - Security-related concerns
+- **Portfolio**: [zeon-portfolio.netlify.app](https://zeon-portfolio.netlify.app/) - View more projects and get in touch
+- **LinkedIn**: [linkedin.com/in/zeanur-rahaman-zeon](https://www.linkedin.com/in/zeanur-rahaman-zeon/) - Connect professionally
 
-### Help Categories
+### About This Project
 
-| Topic            | Channel            | Response Time |
-| ---------------- | ------------------ | ------------- |
-| Bug Reports      | GitHub Issues      | 1-3 days      |
-| Feature Requests | GitHub Issues      | 1 week        |
-| Code Questions   | GitHub Discussions | 1-2 days      |
-| Urgent Issues    | Email              | 4-8 hours     |
-| Security Issues  | Email              | 2-4 hours     |
+This DevQnA platform serves as a comprehensive portfolio piece demonstrating:
+
+- **Modern Web Development** with Next.js 15, React 19, and TypeScript 5
+- **Full-Stack Architecture** including MongoDB, API design, and authentication
+- **UI/UX Best Practices** with responsive design and accessibility
+- **Development Workflow** showcasing clean code, testing, and documentation
+- **Project Management** from conception to deployment
+
+Feel free to use this project as:
+- **Learning Resource** - Study the code structure and patterns
+- **Portfolio Reference** - See how a complete full-stack application is built
+- **Collaboration Opportunity** - Reach out for similar projects or improvements
+- **Inspiration** - Fork and modify for your own portfolio projects
 
 ## 🎯 Project Roadmap
 

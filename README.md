@@ -8,6 +8,10 @@
 
 A modern, community-driven Q&A platform for developers, built as an enhanced alternative to Stack Overflow. DevQnA enables developers to ask questions, share knowledge, and collaborate with a global community of programmers.
 
+## Live Demo
+
+[https://dev-qna.vercel.app/](https://dev-qna.vercel.app/)
+
 ## 🌟 Features
 
 ### Core Functionality
@@ -17,6 +21,7 @@ A modern, community-driven Q&A platform for developers, built as an enhanced alt
 - **Tag-based Organization**: Categorize questions with relevant technology tags
 - **Rich Text Editor**: Create formatted posts with code syntax highlighting
 - **Search & Filtering**: Find relevant questions using advanced search and filters
+- **AI assisted Answer Generation**: The members can enhance their answers with AI
 
 ### User Management
 
@@ -454,26 +459,37 @@ npm run dev
 - **[Tailwind CSS](https://tailwindcss.com/docs)** - Styling framework
 - **[TypeScript Handbook](https://www.typescriptlang.org/docs/)** - Type safety guide
 
-## 📞 Support & Community
+## 📞 Support & Contact
 
 ### Getting Help
 
-- **📖 Documentation** - Comprehensive setup and API guides
-- **💬 GitHub Discussions** - Community conversations and Q&A
-- **🐛 Issue Tracker** - Bug reports and feature requests
-- **📧 Email Support** - Direct contact with maintainers
+- **📖 Documentation** - Comprehensive setup and API guides in this README and `/docs` folder
+- **💬 GitHub Issues** - Bug reports, feature requests, and technical questions
+- **📧 Email Support** - Direct contact: [zeon.cse@gmail.com](mailto:zeon.cse@gmail.com)
+- **🌐 Portfolio** - View more projects: [zeon-portfolio.netlify.app](https://zeon-portfolio.netlify.app/)
+- **💼 LinkedIn** - Connect with me: [linkedin.com/in/zeanur-rahaman-zeon](https://www.linkedin.com/in/zeanur-rahaman-zeon/)
 
-### Community Guidelines
+### Project Guidelines
 
-- Be respectful and inclusive to all community members
-- Use clear, descriptive titles for questions and issues
-- Provide code examples when asking technical questions
-- Help others by answering questions when possible
+This is a personal portfolio project showcasing full-stack development skills. Feel free to:
 
-### Contributing
+- **Fork and modify** the code for your own learning
+- **Report issues** or suggest improvements via GitHub Issues
+- **Use as reference** for your own projects
+- **Reach out** for collaboration opportunities
 
-We welcome contributions from everyone! See our [Contributing Guide](CONTRIBUTING.md) for details.
+### About This Project
+
+Built by **Zeanur Rahaman Zeon** as a comprehensive portfolio piece demonstrating:
+
+- **Modern Web Development**: Next.js 15, React 19, TypeScript 5
+- **Full-Stack Architecture**: MongoDB, API design, authentication
+- **UI/UX Design**: Responsive design, dark/light themes, accessibility
+- **Development Practices**: Clean code, testing, documentation
+- **Project Management**: Complete development lifecycle from conception to deployment
 
 ---
 
-**DevQnA** - The future of developer Q&A platforms. 🚀
+**DevQnA** - Showcasing modern full-stack development expertise. 🚀
+
+**Built with ❤️ by [Zeanur Rahaman Zeon](https://zeon-portfolio.netlify.app/)**
