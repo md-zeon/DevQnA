@@ -1,0 +1,411 @@
+@startuml Question Management Workflow
+
+title DevQnA - Question Posting, Editing, and Deletion Workflow
+
+skinparam backgroundColor #FEFEFE
+skinparam actorStyle awesome
+skinparam BoxPadding 20
+
+actor User as U
+participant "Frontend\n(QuestionForm)" as F
+participant "Server Action\n(question.action)" as SA
+participant "Validation\nLayer" as V
+participant "MongoDB\nTransaction" as TX
+participant "Question\nModel" as Q
+participant "Tag\nModel" as T
+participant "TagQuestion\nModel" as TQ
+participant "Interaction\nTracking" as I
+
+== Ask New Question Flow ==
+
+U -> F: Navigate to /ask-question
+activate F
+F -> F: Check authentication
+note right of F
+  Middleware verifies:
+  - Valid session
+  - User is logged in
+  - Session not expired
+end note
+
+F --> U: Display Question Form
+U -> F: Fill question details
+note right of U
+  Form fields:
+  - Title (required)
+  - Content (rich text)
+  - Tags (1-5 tags)
+  - Code snippets (optional)
+end note
+
+U -> F: Click "Post Question"
+
+F -> F: Client-side validation
+note right of F
+  Validate:
+  - Title length (10-130 chars)
+  - Content not empty
+  - At least 1 tag
+  - Max 5 tags
+end note
+
+F -> SA: createQuestion(params)
+activate SA
+
+SA -> V: Validate with AskQuestionSchema
+activate V
+V -> V: Check title format
+V -> V: Check content length
+V -> V: Check tags array
+V -> V: Authorize user session
+V --> SA: Validation passed
+deactivate V
+
+SA -> TX: Start MongoDB transaction
+activate TX
+
+SA -> Q: Create Question document
+activate Q
+Q -> Q: Generate _id
+Q -> Q: Set initial values
+note right of Q
+  Initial values:
+  - views: 0
+  - upvotes: 0
+  - downvotes: 0
+  - answers: 0
+  - author: userId
+  - createdAt: now()
+end note
+Q --> SA: Question created with _id
+deactivate Q
+
+loop For each tag
+    SA -> T: Find or create Tag
+    activate T
+    T -> T: findOneAndUpdate()
+    note right of T
+      Operations:
+      - Case-insensitive search
+      - Create if not exists
+      - Increment question count
+      - Return tag _id
+    end note
+    T --> SA: Tag _id
+    deactivate T
+    
+    SA -> TQ: Create TagQuestion relationship
+    activate TQ
+    TQ -> TQ: Insert mapping
+    note right of TQ
+      Relationship:
+      - tag: tag_id
+      - question: question_id
+    end note
+    TQ --> SA: Mapping created
+    deactivate TQ
+end
+
+SA -> Q: Update Question with tag IDs
+activate Q
+Q -> Q: $push tags array
+Q --> SA: Tags linked
+deactivate Q
+
+SA -> TX: Commit transaction
+TX --> SA: Transaction successful
+deactivate TX
+
+SA -> I: Log interaction (async)
+activate I
+note right of I
+  Interaction data:
+  - action: "post"
+  - actionTarget: "question"
+  - actionId: questionId
+  - authorId: userId
+end note
+I --> SA: Logged
+deactivate I
+
+SA --> F: Success response + question data
+deactivate SA
+
+F -> F: Clear form
+F --> U: Redirect to /questions/[id]
+deactivate F
+
+== Edit Question Flow ==
+
+U -> F: Click "Edit" on own question
+activate F
+F -> F: Verify ownership
+note right of F
+  Check:
+  - User is question author
+  - Or user is admin/moderator
+end note
+
+F --> U: Display pre-filled form
+U -> F: Modify title/content/tags
+U -> F: Click "Update Question"
+
+F -> SA: editQuestion(params)
+activate SA
+
+SA -> V: Validate EditQuestionSchema
+activate V
+V -> V: Validate questionId
+V -> V: Validate modified fields
+V -> V: Authorize user
+V --> SA: Validation passed
+deactivate V
+
+SA -> TX: Start transaction
+activate TX
+
+SA -> Q: Find question by ID
+activate Q
+Q --> SA: Question document
+deactivate Q
+
+SA -> SA: Verify ownership
+alt Not question author
+    SA --> F: Error: "Unauthorized"
+else Is author
+    
+    alt Title or Content changed
+        SA -> Q: Update title/content
+        activate Q
+        Q -> Q: Save changes
+        Q --> SA: Updated
+        deactivate Q
+    end
+    
+    SA -> SA: Compare old vs new tags
+    note right of SA
+      Determine:
+      - Tags to add
+      - Tags to remove
+      - Tags unchanged
+    end note
+    
+    alt Has tags to add
+        loop For each new tag
+            SA -> T: Find or create tag
+            activate T
+            T -> T: Increment question count
+            T --> SA: Tag _id
+            deactivate T
+            
+            SA -> TQ: Create relationship
+            activate TQ
+            TQ --> SA: Relationship created
+            deactivate TQ
+            
+            SA -> Q: Push tag to question
+            activate Q
+            Q --> SA: Tag added
+            deactivate Q
+        end
+    end
+    
+    alt Has tags to remove
+        SA -> T: Decrement question count
+        activate T
+        T -> T: $inc questions: -1
+        T --> SA: Updated
+        deactivate T
+        
+        SA -> TQ: Delete relationships
+        activate TQ
+        TQ --> SA: Deleted
+        deactivate TQ
+        
+        SA -> Q: Remove tags from question
+        activate Q
+        Q --> SA: Tags removed
+        deactivate Q
+    end
+    
+    SA -> Q: Save final question state
+    activate Q
+    Q --> SA: Saved
+    deactivate Q
+    
+    SA -> TX: Commit transaction
+    TX --> SA: Success
+    deactivate TX
+    
+    SA --> F: Updated question data
+end
+deactivate SA
+
+F --> U: Show updated question
+deactivate F
+
+== Delete Question Flow ==
+
+U -> F: Click "Delete" on own question
+activate F
+F --> U: Show confirmation dialog
+U -> F: Confirm deletion
+
+F -> SA: deleteQuestion(questionId)
+activate SA
+
+SA -> V: Validate DeleteQuestionSchema
+activate V
+V -> V: Validate questionId format
+V -> V: Authorize user session
+V --> SA: Validation passed
+deactivate V
+
+SA -> TX: Start transaction
+activate TX
+
+SA -> Q: Find question by ID
+activate Q
+Q --> SA: Question document
+deactivate Q
+
+SA -> SA: Verify ownership
+alt Not question author
+    SA --> F: Error: "Unauthorized"
+else Is author
+    
+    participant "Collection\nModel" as C
+    participant "Vote\nModel" as VT
+    participant "Answer\nModel" as A
+    
+    SA -> C: Delete from collections
+    activate C
+    C -> C: deleteMany({question: questionId})
+    C --> SA: Collections removed
+    deactivate C
+    
+    SA -> TQ: Delete tag relationships
+    activate TQ
+    TQ -> TQ: deleteMany({question: questionId})
+    TQ --> SA: Relationships deleted
+    deactivate TQ
+    
+    SA -> T: Decrement tag counts
+    activate T
+    T -> T: updateMany({$inc: {questions: -1}})
+    T --> SA: Counts updated
+    deactivate T
+    
+    SA -> VT: Delete question votes
+    activate VT
+    VT -> VT: deleteMany({actionId: questionId})
+    VT --> SA: Votes deleted
+    deactivate VT
+    
+    SA -> A: Find all answers
+    activate A
+    A --> SA: Answer IDs
+    
+    alt Has answers
+        SA -> A: Delete all answers
+        A --> SA: Answers deleted
+        
+        SA -> VT: Delete answer votes
+        VT -> VT: deleteMany({actionId: {$in: answerIds}})
+        VT --> SA: Answer votes deleted
+    end
+    deactivate A
+    deactivate VT
+    
+    SA -> Q: Delete question
+    activate Q
+    Q --> SA: Question deleted
+    deactivate Q
+    
+    SA -> TX: Commit transaction
+    TX --> SA: Success
+    deactivate TX
+    
+    SA -> I: Log deletion (async)
+    activate I
+    I --> SA: Logged
+    deactivate I
+    
+    SA --> F: Success response
+end
+deactivate SA
+
+F --> U: Redirect to /profile/[userId]
+deactivate F
+
+== View Question & Increment Views ==
+
+U -> F: Click on question
+activate F
+
+F -> SA: getQuestion(questionId)
+activate SA
+SA -> Q: Find by ID with populate
+activate Q
+Q -> Q: Populate tags
+Q -> Q: Populate author
+Q --> SA: Full question data
+deactivate Q
+SA --> F: Question details
+deactivate SA
+
+F -> SA: incrementViews(questionId)
+activate SA
+SA -> Q: Increment views counter
+activate Q
+Q -> Q: views++
+Q -> Q: save()
+Q --> SA: Updated views count
+deactivate Q
+SA --> F: New views count
+deactivate SA
+
+F --> U: Display question page
+deactivate F
+
+== Error Handling ==
+
+note over F, I
+  **Transaction Rollback Scenarios:**
+  1. Database connection failure
+  2. Validation errors during transaction
+  3. Duplicate tag creation conflicts
+  4. Question not found
+  5. Unauthorized access attempts
+  6. Tag limit exceeded
+  
+  **On Error:**
+  - Rollback transaction
+  - Log error details
+  - Return user-friendly message
+  - Maintain data consistency
+end note
+
+legend right
+  **Question Constraints:**
+  - Title: 10-130 characters
+  - Content: Minimum 20 characters
+  - Tags: 1-5 tags required
+  - Author: Must be authenticated
+  - Ownership: Edit/Delete own questions only
+  
+  **Performance Optimizations:**
+  - Transaction ensures atomicity
+  - Async interaction logging
+  - Cached tag lookups
+  - Indexed queries on question fields
+  - Pagination for question lists
+  
+  **Data Consistency:**
+  - MongoDB transactions (ACID)
+  - Cascading deletes on question removal
+  - Tag counter synchronization
+  - Relationship integrity maintained
+endlegend
+
+@enduml
