@@ -1,0 +1,554 @@
+@startuml Search and Discovery Workflow
+
+title DevQnA - Search, Filter, and Discovery System
+
+skinparam backgroundColor #FEFEFE
+skinparam actorStyle awesome
+skinparam BoxPadding 20
+
+actor User as U
+participant "Frontend\n(Search UI)" as F
+participant "Global Search\nComponent" as GS
+participant "Local Search\nComponent" as LS
+participant "Search Action\n(general.action)" as SA
+participant "Question Action\n(question.action)" as QA
+participant "Tag Action\n(tag.action)" as TA
+participant "User Action\n(user.action)" as UA
+participant "MongoDB\nFull-Text Search" as DB
+participant "Cache\nLayer" as C
+participant "AI Search\n(Future)" as AI
+
+== Global Search Flow ==
+
+U -> F: Type in global search bar
+activate F
+F -> F: Debounce input (300ms)
+note right of F
+  Debouncing prevents:
+  - Excessive API calls
+  - Database load
+  - Poor performance
+end note
+
+F -> GS: Search query updated
+activate GS
+
+GS -> C: Check search cache
+activate C
+C --> GS: Cache miss
+deactivate C
+
+GS -> SA: globalSearch(query)
+activate SA
+
+SA -> DB: Full-text search across models
+activate DB
+
+par Parallel Search
+    DB -> DB: Search Questions
+    note right of DB
+      Search fields:
+      - title
+      - content
+      Match: partial, fuzzy
+    end note
+    
+    DB -> DB: Search Tags
+    note right of DB
+      Search fields:
+      - name
+      - description
+      Match: starts with
+    end note
+    
+    DB -> DB: Search Users
+    note right of DB
+      Search fields:
+      - name
+      - username
+      - bio
+      Match: contains
+    end note
+    
+    DB -> DB: Search Answers
+    note right of DB
+      Search fields:
+      - content
+      Match: partial
+    end note
+end
+
+DB --> SA: Aggregated results
+deactivate DB
+
+SA -> SA: Rank and score results
+note right of SA
+  Ranking factors:
+  - Relevance score
+  - Recency
+  - Popularity (votes)
+  - User reputation
+  - Match location (title > content)
+end note
+
+SA -> SA: Group by type
+note right of SA
+  Result groups:
+  - Questions (top 5)
+  - Tags (top 3)
+  - Users (top 3)
+  - Answers (top 3)
+end note
+
+SA -> C: Cache results (5 min)
+activate C
+C --> SA: Cached
+deactivate C
+
+SA --> GS: Formatted results
+deactivate SA
+
+GS -> GS: Render results dropdown
+note right of GS
+  Results display:
+  - Grouped by type
+  - Highlighted matches
+  - Preview snippets
+  - Quick actions
+end note
+
+GS --> F: Display search results
+deactivate GS
+
+U -> F: Click on result
+F --> U: Navigate to result page
+deactivate F
+
+== Local Search (Questions Page) ==
+
+U -> F: Navigate to questions page
+activate F
+F -> LS: Initialize local search
+activate LS
+
+LS -> QA: getQuestions(filters)
+activate QA
+
+QA -> DB: Query with filters
+activate DB
+
+note right of DB
+  Default query:
+  - Status: all
+  - Sort: newest
+  - Page: 1
+  - Limit: 20
+end note
+
+DB --> QA: Questions list
+deactivate DB
+
+QA --> LS: Initial results
+deactivate QA
+
+LS --> F: Display questions
+deactivate LS
+
+U -> F: Enter search term
+activate LS
+F -> LS: Update search query
+
+LS -> LS: Build search filters
+note right of LS
+  Filter combinations:
+  - Search query
+  - Filter type
+  - Sort order
+  - Tag filter
+  - Date range
+end note
+
+LS -> QA: getQuestions(updatedFilters)
+activate QA
+
+QA -> DB: Filtered query
+activate DB
+
+DB -> DB: Apply text search
+DB -> DB: Apply filters
+DB -> DB: Apply sorting
+DB -> DB: Apply pagination
+
+DB --> QA: Filtered results
+deactivate DB
+
+QA --> LS: Updated questions
+deactivate QA
+
+LS --> F: Refresh results
+deactivate LS
+F --> U: Show filtered questions
+deactivate F
+
+== Advanced Filtering ==
+
+U -> F: Click "Filters" button
+activate F
+F --> U: Show filter panel
+note right of U
+  Available filters:
+  - Status (All, Unanswered, Resolved)
+  - Sort (Newest, Popular, Votes)
+  - Tags (Multiple selection)
+  - Date range
+  - Min votes
+  - Has accepted answer
+end note
+
+U -> F: Select multiple filters
+U -> F: Apply filters
+
+F -> LS: Update filter state
+activate LS
+
+LS -> LS: Validate filter combination
+LS -> LS: Build filter query
+
+LS -> QA: getQuestions(complexFilters)
+activate QA
+
+QA -> DB: Complex query
+activate DB
+
+note right of DB
+  Query example:
+  {
+    tags: { $in: [tag1, tag2] },
+    answers: { $gt: 0 },
+    upvotes: { $gte: 5 },
+    createdAt: { $gte: dateRange },
+    $text: { $search: query }
+  }
+  .sort({ score: -1, upvotes: -1 })
+end note
+
+DB --> QA: Matched questions
+deactivate DB
+
+QA -> QA: Apply pagination
+QA --> LS: Results with metadata
+deactivate QA
+
+LS --> F: Display filtered results
+deactivate LS
+
+F -> F: Show active filters
+F -> F: Show result count
+F --> U: Filtered questions displayed
+deactivate F
+
+== Tag-based Search ==
+
+U -> F: Click on tag
+activate F
+
+F -> TA: getQuestionsByTag(tagId)
+activate TA
+
+TA -> DB: Find tag details
+activate DB
+DB --> TA: Tag info
+deactivate DB
+
+TA -> QA: getQuestions({tags: tagId})
+activate QA
+
+QA -> DB: Query by tag
+activate DB
+DB --> QA: Tagged questions
+deactivate DB
+
+QA --> TA: Questions list
+deactivate QA
+
+TA -> TA: Get related tags
+note right of TA
+  Related tags:
+  - Co-occurring tags
+  - Similar topics
+  - Trending with this tag
+end note
+
+TA --> F: Tag page data
+deactivate TA
+
+F -> F: Display tag header
+F -> F: Show related tags
+F -> F: List questions
+F --> U: Tag-filtered view
+deactivate F
+
+== User Search ==
+
+U -> F: Go to community page
+activate F
+
+F --> U: Show user search
+U -> F: Search for user
+
+F -> UA: searchUsers(query)
+activate UA
+
+UA -> DB: Search users
+activate DB
+
+note right of DB
+  Search criteria:
+  - Username (priority)
+  - Name
+  - Bio
+  - Location
+  - Skills
+end note
+
+DB --> UA: Matching users
+deactivate DB
+
+UA -> UA: Sort by relevance
+note right of UA
+  Ranking factors:
+  - Exact username match
+  - Reputation
+  - Activity level
+  - Join date
+end note
+
+UA --> F: User results
+deactivate UA
+
+F -> F: Display user cards
+note right of F
+  User card shows:
+  - Avatar
+  - Name & username
+  - Reputation & badge
+  - Top tags
+  - Questions/Answers count
+end note
+
+F --> U: Show user results
+deactivate F
+
+== Recommended Questions (AI-Enhanced) ==
+
+U -> F: View homepage (logged in)
+activate F
+
+F -> QA: getRecommendedQuestions(userId)
+activate QA
+
+QA -> DB: Get user interactions
+activate DB
+note right of DB
+  Interaction history:
+  - Viewed questions
+  - Voted on content
+  - Bookmarked items
+  - Posted questions
+  - Tags engaged with
+end note
+
+DB --> QA: User activity data
+deactivate DB
+
+QA -> QA: Extract user preferences
+note right of QA
+  Analyze:
+  - Favorite tags
+  - Topic interests
+  - Difficulty level
+  - Answer patterns
+end note
+
+QA -> AI: Get AI recommendations
+activate AI
+AI -> AI: Machine learning model
+note right of AI
+  ML features:
+  - Collaborative filtering
+  - Content similarity
+  - User behavior patterns
+  - Trending topics
+end note
+AI --> QA: Scored recommendations
+deactivate AI
+
+QA -> DB: Fetch recommended questions
+activate DB
+DB --> QA: Question details
+deactivate DB
+
+QA -> QA: Filter already seen
+QA -> QA: Sort by relevance score
+
+QA --> F: Personalized questions
+deactivate QA
+
+F --> U: Show "Recommended for You"
+deactivate F
+
+== Search Analytics & Tracking ==
+
+participant "Analytics\nSystem" as AN
+
+note over U, AN
+  **Search Analytics Tracked:**
+  
+  1. **Query Metrics:**
+     - Search terms frequency
+     - Zero-result queries
+     - Popular searches
+     - Search refinements
+  
+  2. **User Behavior:**
+     - Click-through rate
+     - Time to result click
+     - Result relevance feedback
+     - Search abandonment rate
+  
+  3. **Performance Metrics:**
+     - Query execution time
+     - Cache hit rate
+     - Result count distribution
+     - Database load
+  
+  4. **Search Quality:**
+     - Result relevance scores
+     - User satisfaction
+     - A/B test results
+     - Search to conversion rate
+end note
+
+F -> AN: Log search event
+activate AN
+AN -> AN: Record metrics
+note right of AN
+  Event data:
+  - Query string
+  - Result count
+  - Selected result
+  - Time to selection
+  - User context
+end note
+AN --> F: Logged
+deactivate AN
+
+== Search Optimization ==
+
+note over F, C
+  **Performance Optimizations:**
+  
+  1. **Caching Strategy:**
+     - Popular queries cached (5 min)
+     - User-specific cache (session)
+     - Tag-based cache (10 min)
+     - Trending results (1 hour)
+  
+  2. **Database Indexes:**
+     - Text indexes on searchable fields
+     - Compound indexes for filters
+     - Covered queries where possible
+     - Regular index optimization
+  
+  3. **Query Optimization:**
+     - Limit result sets
+     - Projection (select fields)
+     - Pagination for large sets
+     - Aggregation pipelines
+  
+  4. **Client Optimization:**
+     - Debounced input
+     - Optimistic rendering
+     - Lazy loading results
+     - Infinite scroll
+end note
+
+== Autocomplete & Suggestions ==
+
+U -> F: Type in search box
+activate F
+
+alt Query length >= 2
+    F -> SA: getAutocomplete(partial)
+    activate SA
+    
+    SA -> C: Check autocomplete cache
+    activate C
+    C --> SA: Cache hit
+    deactivate C
+    
+    SA --> F: Suggestions
+    deactivate SA
+    
+    F --> U: Show dropdown suggestions
+    note right of F
+      Suggestions include:
+      - Popular searches
+      - Recent searches
+      - Tag matches
+      - Question title matches
+    end note
+else Query length < 2
+    F --> U: No suggestions
+end
+
+deactivate F
+
+== Empty State Handling ==
+
+U -> F: Search with no results
+activate F
+
+F -> SA: Search query
+activate SA
+SA -> DB: Execute search
+activate DB
+DB --> SA: Empty result set
+deactivate DB
+
+SA --> F: No results found
+deactivate SA
+
+F -> F: Display empty state
+note right of F
+  Empty state shows:
+  - "No results found"
+  - Search suggestions
+  - Related tags
+  - Spelling corrections
+  - "Ask a question" CTA
+end note
+
+F --> U: Helpful empty state
+deactivate F
+
+legend right
+  **Search Features:**
+  - Global search across all content
+  - Local search within pages
+  - Advanced filtering options
+  - Tag-based discovery
+  - User search
+  - AI-powered recommendations
+  - Real-time autocomplete
+  - Typo tolerance
+  
+  **Search Ranking:**
+  - Relevance score (primary)
+  - Recency weight
+  - Vote count factor
+  - View count factor
+  - Answer quality
+  - Author reputation
+  
+  **Performance
