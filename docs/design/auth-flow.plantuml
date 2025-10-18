@@ -1,0 +1,338 @@
+@startuml Authentication Process Flow
+
+title DevQnA - Complete Authentication Flow Diagram
+
+!define AWSPUML https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v19.0/dist
+!include AWSPUML/AWSCommon.puml
+
+skinparam backgroundColor #FEFEFE
+skinparam actorStyle awesome
+skinparam BoxPadding 20
+skinparam ParticipantPadding 20
+skinparam SequenceMessageAlign center
+
+actor User as U
+participant "Frontend\n(Next.js)" as F
+participant "NextAuth.js\nMiddleware" as NA
+participant "Auth Handler\n(auth.ts)" as AH
+participant "OAuth Provider\n(GitHub/Google)" as OAuth
+participant "Auth Action\n(Server)" as AA
+participant "MongoDB\nDatabase" as DB
+
+== OAuth Registration Flow ==
+
+U -> F: Click "Sign Up with GitHub/Google"
+activate F
+F -> NA: Redirect to /api/auth/signin/[provider]
+activate NA
+NA -> AH: Initialize OAuth Flow
+activate AH
+AH -> OAuth: Redirect with client_id & redirect_uri
+activate OAuth
+OAuth --> U: Show OAuth Authorization Page
+U -> OAuth: Grant Permissions
+OAuth -> AH: Return authorization_code
+deactivate OAuth
+
+AH -> AH: Exchange code for access_token
+AH -> OAuth: Validate access_token
+activate OAuth
+OAuth --> AH: Return user profile data
+deactivate OAuth
+
+note right of AH
+  Profile data includes:
+  - name
+  - email
+  - image
+  - username (GitHub)
+  - provider account ID
+end note
+
+AH -> AH: signIn callback triggered
+AH -> AA: api.auth.oAuthSignIn()
+activate AA
+
+AA -> DB: Check existing account
+activate DB
+DB --> AA: Account exists?
+
+alt Account does not exist
+    AA -> DB: START TRANSACTION
+    AA -> DB: Create User document
+    note right of DB
+      User: {
+        name, username,
+        email, image,
+        reputation: 0
+      }
+    end note
+    
+    AA -> DB: Create Account document
+    note right of DB
+      Account: {
+        userId, provider,
+        providerAccountId
+      }
+    end note
+    
+    AA -> DB: COMMIT TRANSACTION
+    DB --> AA: New user created
+else Account exists
+    AA -> DB: Fetch existing user data
+    DB --> AA: Return user data
+end
+
+deactivate DB
+AA --> AH: Return success
+deactivate AA
+
+AH -> AH: jwt callback triggered
+AH -> AH: Create JWT with userId
+AH -> AH: session callback triggered
+AH -> AH: Attach userId to session
+
+AH --> NA: Return session token
+deactivate AH
+NA -> F: Set session cookie (HttpOnly, Secure)
+deactivate NA
+F --> U: Redirect to Dashboard
+deactivate F
+
+== Credentials Registration Flow ==
+
+U -> F: Click "Sign Up with Email"
+activate F
+F --> U: Display Registration Form
+U -> F: Fill form (name, username, email, password)
+U -> F: Submit Registration
+
+F -> AA: signUpWithCredentials(params)
+activate AA
+
+AA -> AA: Validate with SignUpSchema
+note right of AA
+  Validation Rules:
+  - Email format
+  - Password strength (min 8 chars)
+  - Username uniqueness
+  - Required fields
+end note
+
+AA -> DB: START TRANSACTION
+activate DB
+
+AA -> DB: Check email exists
+DB --> AA: Email available?
+
+alt Email already exists
+    DB --> AA: Email found
+    AA --> F: Error: "Email already exists"
+else Email available
+    AA -> DB: Check username exists
+    DB --> AA: Username available?
+    
+    alt Username taken
+        DB --> AA: Username found
+        AA --> F: Error: "Username already exists"
+    else Username available
+        AA -> AA: Hash password (bcrypt, salt rounds: 10)
+        
+        AA -> DB: Create User document
+        note right of DB
+          User: {
+            name, username,
+            email, reputation: 0
+          }
+        end note
+        
+        AA -> DB: Create Account document
+        note right of DB
+          Account: {
+            userId, provider: "credentials",
+            providerAccountId: email,
+            password: hashedPassword
+          }
+        end note
+        
+        AA -> DB: COMMIT TRANSACTION
+        DB --> AA: User & Account created
+        
+        AA -> NA: Auto signIn(credentials)
+        activate NA
+        NA -> AH: Credentials provider authorize()
+        activate AH
+        
+        AH -> AA: Validate credentials
+        AA -> DB: Fetch account by email
+        activate DB
+        DB --> AA: Return account
+        deactivate DB
+        
+        AA -> AA: bcrypt.compare(password, hash)
+        AA --> AH: Valid credentials
+        
+        AH -> AH: Create session with JWT
+        AH --> NA: Return user object
+        deactivate AH
+        NA --> AA: Session created
+        deactivate NA
+        
+        AA --> F: Success response
+    end
+end
+
+AA -> DB: ROLLBACK if error
+deactivate DB
+deactivate AA
+
+F --> U: Redirect to Dashboard or show error
+deactivate F
+
+== Credentials Login Flow ==
+
+U -> F: Navigate to /sign-in
+activate F
+F --> U: Display Login Form
+U -> F: Enter email & password
+U -> F: Submit Login
+
+F -> AA: signInWithCredentials(params)
+activate AA
+
+AA -> AA: Validate with SignInSchema
+AA -> DB: Find User by email
+activate DB
+DB --> AA: User found?
+
+alt User not found
+    DB --> AA: null
+    AA --> F: Error: "User not found"
+else User exists
+    AA -> DB: Find Account (credentials provider)
+    DB --> AA: Account with hashed password
+    
+    AA -> AA: bcrypt.compare(password, hashedPassword)
+    
+    alt Invalid password
+        AA --> F: Error: "Invalid password"
+    else Valid password
+        AA -> NA: signIn("credentials", {email, password})
+        activate NA
+        
+        NA -> AH: Trigger Credentials provider
+        activate AH
+        AH -> AH: authorize() method
+        AH -> AA: Validate credentials again
+        AA -> DB: Verify user & account
+        activate DB
+        DB --> AA: Valid credentials
+        deactivate DB
+        AA --> AH: Return user object
+        
+        AH -> AH: jwt callback - create token with userId
+        AH -> AH: session callback - attach userId
+        AH --> NA: Session with JWT
+        deactivate AH
+        
+        NA -> F: Set session cookie
+        deactivate NA
+        AA --> F: Success response
+    end
+end
+
+deactivate DB
+deactivate AA
+
+F --> U: Redirect to Dashboard
+deactivate F
+
+== Session Validation (Middleware) ==
+
+U -> F: Request protected page
+activate F
+F -> NA: Check authentication (middleware.ts)
+activate NA
+
+NA -> NA: matcher checks path
+note right of NA
+  Protected paths:
+  - /ask-question
+  - /profile/*
+  - /collections
+  etc.
+end note
+
+NA -> AH: auth() - validate session
+activate AH
+
+AH -> AH: Verify JWT token from cookie
+alt Valid session
+    AH -> AH: Decode JWT
+    AH -> AH: session callback - get userId
+    AH --> NA: Session object with user
+    NA --> F: Allow access
+    F --> U: Render protected page
+else Invalid/Expired session
+    AH --> NA: null (no session)
+    NA -> F: Redirect to /sign-in
+    deactivate AH
+    F --> U: Show login page
+end
+
+deactivate NA
+deactivate F
+
+== Sign Out Flow ==
+
+U -> F: Click "Sign Out"
+activate F
+F -> NA: POST /api/auth/signout
+activate NA
+NA -> AH: signOut() function
+activate AH
+
+AH -> AH: Clear session from JWT
+AH -> AH: Clear session cookie
+AH --> NA: Signout complete
+deactivate AH
+
+NA --> F: Clear client-side session
+deactivate NA
+F --> U: Redirect to home page
+deactivate F
+
+== Error Handling ==
+
+note over F, DB
+  **Error Scenarios Handled:**
+  1. Network failures - Retry with exponential backoff
+  2. OAuth provider errors - Show user-friendly message
+  3. Database connection issues - Graceful degradation
+  4. Validation errors - Field-specific error messages
+  5. Duplicate email/username - Clear error feedback
+  6. Invalid credentials - Generic "invalid credentials" message
+  7. Session expiry - Automatic redirect to login
+  8. CSRF attacks - Built-in NextAuth protection
+end note
+
+legend right
+  **Security Measures:**
+  - Password hashing with bcrypt (10 salt rounds)
+  - HttpOnly cookies prevent XSS
+  - Secure flag in production (HTTPS only)
+  - CSRF token validation
+  - JWT with short expiration
+  - Rate limiting on auth endpoints
+  - MongoDB transactions for data consistency
+  - Session rotation on login
+  
+  **Session Management:**
+  - JWT stored in HttpOnly cookie
+  - 30-day expiration (configurable)
+  - userId stored in JWT sub claim
+  - Session callback attaches userId to session
+  - Automatic session refresh
+endlegend
+
+@enduml
