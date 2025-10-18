@@ -1,0 +1,546 @@
+@startuml Answer Management Workflow
+
+title DevQnA - Answer Posting, Editing, and Acceptance Workflow
+
+skinparam backgroundColor #FEFEFE
+skinparam actorStyle awesome
+skinparam BoxPadding 20
+
+actor User as U
+actor "Question\nAuthor" as QA
+participant "Frontend\n(AnswerForm)" as F
+participant "Server Action\n(answer.action)" as AA
+participant "Validation\nLayer" as V
+participant "MongoDB\nTransaction" as TX
+participant "Answer\nModel" as A
+participant "Question\nModel" as Q
+participant "User\nModel" as UM
+participant "Interaction\nTracking" as I
+participant "Notification\nSystem" as N
+
+== Post Answer Flow ==
+
+U -> F: View question page
+activate F
+F --> U: Display question + existing answers
+
+U -> F: Click "Write Answer"
+F --> U: Show answer editor
+note right of U
+  Rich text editor features:
+  - Code syntax highlighting
+  - Markdown support
+  - Image upload
+  - Preview mode
+end note
+
+U -> F: Write answer content
+U -> F: Add code examples (optional)
+U -> F: Click "Submit Answer"
+
+F -> F: Client-side validation
+note right of F
+  Validate:
+  - Content not empty
+  - Minimum length (20 chars)
+  - Valid markdown syntax
+  - User is authenticated
+end note
+
+F -> AA: createAnswer(params)
+activate AA
+
+AA -> V: Validate with AnswerSchema
+activate V
+V -> V: Check content length
+V -> V: Check questionId validity
+V -> V: Authorize user
+V --> AA: Validation passed
+deactivate V
+
+AA -> TX: Start transaction
+activate TX
+
+AA -> Q: Verify question exists
+activate Q
+Q --> AA: Question found
+deactivate Q
+
+AA -> A: Create answer document
+activate A
+A -> A: Generate _id
+A -> A: Set initial values
+note right of A
+  Answer: {
+    content,
+    question: questionId,
+    author: userId,
+    upvotes: 0,
+    downvotes: 0,
+    isAccepted: false,
+    createdAt: now()
+  }
+end note
+A --> AA: Answer created
+deactivate A
+
+AA -> Q: Increment answer count
+activate Q
+Q -> Q: $inc answers: 1
+Q --> AA: Count updated
+deactivate Q
+
+AA -> TX: Commit transaction
+TX --> AA: Success
+deactivate TX
+
+AA -> I: Log interaction (async)
+activate I
+note right of I
+  Track:
+  - action: "post"
+  - actionTarget: "answer"
+  - actionId: answerId
+  - authorId: userId
+end note
+I --> AA: Logged
+deactivate I
+
+AA -> N: Notify question author
+activate N
+N -> N: Create notification
+note right of N
+  Notification:
+  - type: "new_answer"
+  - recipient: question author
+  - message: "[User] answered your question"
+  - link: /questions/[id]#answer-[answerId]
+end note
+N --> AA: Notification sent
+deactivate N
+
+AA --> F: Success + answer data
+deactivate AA
+
+F -> F: Append answer to list
+F -> F: Scroll to new answer
+F --> U: Show success message
+deactivate F
+
+== Edit Answer Flow ==
+
+U -> F: Click "Edit" on own answer
+activate F
+F -> F: Verify ownership
+note right of F
+  Check:
+  - User is answer author
+  - Answer not accepted yet
+  - User has edit permission
+end note
+
+F --> U: Show pre-filled editor
+U -> F: Modify content
+U -> F: Click "Update Answer"
+
+F -> AA: editAnswer(params)
+activate AA
+
+AA -> V: Validate EditAnswerSchema
+activate V
+V -> V: Validate answerId
+V -> V: Validate content
+V -> V: Authorize user
+V --> AA: Valid
+deactivate V
+
+AA -> TX: Start transaction
+activate TX
+
+AA -> A: Find answer by ID
+activate A
+A --> AA: Answer document
+deactivate A
+
+AA -> AA: Verify ownership
+alt Not answer author
+    AA --> F: Error: "Unauthorized"
+else Is author
+    alt Answer is accepted
+        AA --> F: Error: "Cannot edit accepted answer"
+    else Can edit
+        AA -> A: Update content
+        activate A
+        A -> A: Set content
+        A -> A: Update updatedAt
+        A -> A: save()
+        A --> AA: Answer updated
+        deactivate A
+        
+        AA -> TX: Commit transaction
+        TX --> AA: Success
+        deactivate TX
+        
+        AA -> I: Log edit interaction
+        activate I
+        I --> AA: Logged
+        deactivate I
+        
+        AA --> F: Updated answer data
+    end
+end
+
+deactivate AA
+
+F --> U: Show updated answer
+deactivate F
+
+== Delete Answer Flow ==
+
+U -> F: Click "Delete" on own answer
+activate F
+F --> U: Show confirmation dialog
+
+U -> F: Confirm deletion
+
+F -> AA: deleteAnswer(answerId)
+activate AA
+
+AA -> V: Validate DeleteAnswerSchema
+activate V
+V -> V: Validate answerId
+V -> V: Authorize user
+V --> AA: Valid
+deactivate V
+
+AA -> TX: Start transaction
+activate TX
+
+AA -> A: Find answer
+activate A
+A --> AA: Answer document
+deactivate A
+
+AA -> AA: Verify ownership
+alt Not answer author
+    AA --> F: Error: "Unauthorized"
+else Is author
+    alt Answer is accepted
+        AA --> F: Error: "Cannot delete accepted answer"
+    else Can delete
+        participant "Vote\nModel" as VT
+        
+        AA -> VT: Delete answer votes
+        activate VT
+        VT -> VT: deleteMany({actionId: answerId})
+        VT --> AA: Votes deleted
+        deactivate VT
+        
+        AA -> Q: Decrement answer count
+        activate Q
+        Q -> Q: $inc answers: -1
+        Q --> AA: Count updated
+        deactivate Q
+        
+        AA -> A: Delete answer
+        activate A
+        A --> AA: Answer deleted
+        deactivate A
+        
+        AA -> TX: Commit transaction
+        TX --> AA: Success
+        deactivate TX
+        
+        AA -> I: Log deletion
+        activate I
+        I --> AA: Logged
+        deactivate I
+        
+        AA --> F: Success
+    end
+end
+
+deactivate AA
+
+F --> U: Remove answer from view
+deactivate F
+
+== Accept Answer Flow (Question Author) ==
+
+QA -> F: View own question with answers
+activate F
+F --> QA: Show answers with "Accept" buttons
+note right of F
+  Accept button visible only:
+  - To question author
+  - On non-accepted answers
+  - One answer can be accepted
+end note
+
+QA -> F: Click "Accept Answer"
+F --> QA: Show confirmation
+note right of F
+  "Mark this as the best answer?
+  This will reward the author
+  with reputation points."
+end note
+
+QA -> F: Confirm acceptance
+
+F -> AA: acceptAnswer(params)
+activate AA
+
+AA -> V: Validate AcceptAnswerSchema
+activate V
+V -> V: Validate answerId
+V -> V: Validate questionId
+V -> V: Authorize question author
+V --> AA: Valid
+deactivate V
+
+AA -> TX: Start transaction
+activate TX
+
+AA -> Q: Find question
+activate Q
+Q --> AA: Question document
+deactivate Q
+
+AA -> AA: Verify question ownership
+alt Not question author
+    AA --> F: Error: "Only question author can accept"
+else Is author
+    alt Question already has accepted answer
+        AA -> A: Find current accepted answer
+        activate A
+        A --> AA: Previous accepted answer
+        
+        AA -> A: Unaccept previous answer
+        A -> A: Set isAccepted: false
+        A --> AA: Unaccepted
+        deactivate A
+        
+        AA -> UM: Revert previous author reputation
+        activate UM
+        UM -> UM: $inc reputation: -15
+        UM --> AA: Reverted
+        deactivate UM
+        
+        AA -> UM: Revert question author reputation
+        UM -> UM: $inc reputation: -2
+        UM --> AA: Reverted
+        deactivate UM
+    end
+    
+    AA -> A: Mark new answer as accepted
+    activate A
+    A -> A: Set isAccepted: true
+    A --> AA: Accepted
+    deactivate A
+    
+    AA -> Q: Update question
+    activate Q
+    Q -> Q: Set acceptedAnswer: answerId
+    Q -> Q: Set isResolved: true
+    Q --> AA: Updated
+    deactivate Q
+    
+    AA -> A: Get answer author
+    activate A
+    A --> AA: Answer author ID
+    deactivate A
+    
+    AA -> UM: Award answer author
+    activate UM
+    UM -> UM: $inc reputation: 15
+    note right of UM
+      Reputation reward:
+      +15 for accepted answer
+    end note
+    UM --> AA: Reputation added
+    deactivate UM
+    
+    AA -> UM: Reward question author
+    UM -> UM: $inc reputation: 2
+    note right of UM
+      Small reward for
+      accepting an answer
+    end note
+    UM --> AA: Reputation added
+    deactivate UM
+    
+    AA -> TX: Commit transaction
+    TX --> AA: Success
+    deactivate TX
+    
+    AA -> N: Notify answer author
+    activate N
+    N -> N: Create notification
+    note right of N
+      "Your answer was accepted!
+      You earned +15 reputation"
+    end note
+    N --> AA: Notified
+    deactivate N
+    
+    AA -> I: Log acceptance
+    activate I
+    I --> AA: Logged
+    deactivate I
+    
+    AA --> F: Success
+end
+
+deactivate AA
+
+F -> F: Update UI
+note right of F
+  UI changes:
+  - Show "Accepted" badge
+  - Move answer to top
+  - Highlight answer
+  - Update reputation display
+end note
+
+F --> QA: Show accepted answer state
+deactivate F
+
+== View Answers with Sorting ==
+
+U -> F: View question page
+activate F
+
+F -> AA: getAnswers(questionId, sortBy)
+activate AA
+
+AA -> A: Query answers
+activate A
+
+alt Sort by votes (default)
+    A -> A: sort({upvotes: -1, createdAt: -1})
+else Sort by newest
+    A -> A: sort({createdAt: -1})
+else Sort by oldest
+    A -> A: sort({createdAt: 1})
+end
+
+A -> A: Populate author details
+A -> A: Move accepted answer to top
+note right of A
+  Accepted answer always
+  displayed first regardless
+  of sort option
+end note
+
+A --> AA: Sorted answers
+deactivate A
+
+AA --> F: Answers with metadata
+deactivate AA
+
+F -> F: Render answer list
+note right of F
+  Each answer shows:
+  - Author info
+  - Content with syntax highlighting
+  - Vote buttons
+  - Accepted badge (if applicable)
+  - Edit/Delete (if own answer)
+  - Timestamp
+end note
+
+F --> U: Display sorted answers
+deactivate F
+
+== Answer Quality Guidelines ==
+
+note over U, N
+  **Answer Quality Checks:**
+  
+  1. **Minimum Requirements:**
+     - At least 20 characters
+     - Valid markdown syntax
+     - Not duplicate of existing answer
+  
+  2. **Encouraged Content:**
+     - Code examples with explanations
+     - Step-by-step solutions
+     - References to documentation
+     - Personal experience/context
+  
+  3. **Discouraged Content:**
+     - One-liner answers without explanation
+     - Link-only answers
+     - "Thanks" or "me too" comments
+     - Questions in answer section
+  
+  4. **Auto-moderation:**
+     - Flag short answers for review
+     - Detect code-only answers
+     - Check for plagiarism
+     - Spam detection
+end note
+
+== Answer Interaction Tracking ==
+
+note over U, I
+  **Tracked Interactions:**
+  
+  1. **Answer Events:**
+     - Post answer
+     - Edit answer
+     - Delete answer
+     - Accept answer
+  
+  2. **Engagement Metrics:**
+     - Views per answer
+     - Vote patterns
+     - Acceptance rate
+     - Time to acceptance
+  
+  3. **User Analytics:**
+     - Answer quality score
+     - Acceptance ratio
+     - Average votes received
+     - Response time to questions
+  
+  4. **Question Analytics:**
+     - Time to first answer
+     - Total answer count
+     - Accepted answer quality
+     - Community engagement
+end note
+
+legend right
+  **Answer Rules:**
+  - Must be authenticated to answer
+  - No character limit (min 20 chars)
+  - Can edit own answers (if not accepted)
+  - Can delete own answers (if not accepted)
+  - Only question author can accept answers
+  - Only one answer can be accepted
+  - Accepted answers cannot be edited/deleted
+  - Accepted answer always shown first
+  
+  **Reputation Impact:**
+  - Answer accepted: +15 (answer author)
+  - Answer accepted: +2 (question author)
+  - Accepting answer helps both users
+  - Answer upvote: +10
+  - Answer downvote: -2
+  
+  **Notifications:**
+  - Question author notified of new answers
+  - Answer author notified when accepted
+  - Answer author notified of comments
+  - Email digest of answer activity
+  
+  **Best Practices:**
+  - Include code examples
+  - Explain your reasoning
+  - Format code properly
+  - Link to relevant resources
+  - Update if question is clarified
+endlegend
+
+@enduml
