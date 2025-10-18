@@ -1,0 +1,420 @@
+@startuml Voting System Workflow
+
+title DevQnA - Voting and Reputation System
+
+skinparam backgroundColor #FEFEFE
+skinparam actorStyle awesome
+skinparam BoxPadding 20
+
+actor User as U
+participant "Frontend\n(Votes Component)" as F
+participant "Server Action\n(vote.action)" as VA
+participant "Validation\nLayer" as V
+participant "MongoDB\nTransaction" as TX
+participant "Vote\nModel" as VT
+participant "Question/Answer\nModel" as QA
+participant "User\nModel (Author)" as UM
+participant "Reputation\nSystem" as R
+
+== Initial Vote (Upvote) ==
+
+U -> F: Click upvote button
+activate F
+F -> F: Check authentication
+note right of F
+  Verify:
+  - User is logged in
+  - Not voting on own content
+  - Session is valid
+end note
+
+F -> F: Optimistic UI update
+note right of F
+  UI changes immediately:
+  - Increment vote count
+  - Highlight upvote button
+  - Show loading state
+end note
+
+F -> VA: upvoteQuestion/Answer(params)
+activate VA
+
+VA -> V: Validate vote schema
+activate V
+V -> V: Check actionId (ObjectId)
+V -> V: Check actionType (question/answer)
+V -> V: Verify user authorization
+V --> VA: Validation passed
+deactivate V
+
+VA -> TX: Start transaction
+activate TX
+
+VA -> VT: Check existing vote
+activate VT
+VT -> VT: findOne({user, actionId, actionType})
+VT --> VA: Vote not found
+deactivate VT
+
+VA -> VT: Create new upvote
+activate VT
+VT -> VT: Insert vote document
+note right of VT
+  Vote: {
+    user: userId,
+    actionType: "question"|"answer",
+    actionId: contentId,
+    voteType: "upvote",
+    createdAt: now()
+  }
+end note
+VT --> VA: Vote created
+deactivate VT
+
+VA -> QA: Update content score
+activate QA
+QA -> QA: $inc upvotes: 1
+QA --> VA: Score updated
+deactivate QA
+
+VA -> QA: Get author ID
+activate QA
+QA --> VA: authorId
+deactivate QA
+
+VA -> R: Calculate reputation change
+activate R
+R -> R: Determine points
+note right of R
+  Reputation points:
+  - Question upvote: +10
+  - Answer upvote: +10
+  - Question downvote: -2
+  - Answer downvote: -2
+end note
+R --> VA: +10 points
+deactivate R
+
+VA -> UM: Update author reputation
+activate UM
+UM -> UM: $inc reputation: 10
+UM --> VA: Reputation updated
+deactivate UM
+
+VA -> TX: Commit transaction
+TX --> VA: Success
+deactivate TX
+
+VA --> F: Success response with new counts
+deactivate VA
+
+F -> F: Update UI with actual data
+F --> U: Show updated vote count
+deactivate F
+
+== Change Vote (Upvote to Downvote) ==
+
+U -> F: Click downvote (previously upvoted)
+activate F
+
+F -> VA: downvoteQuestion/Answer(params)
+activate VA
+
+VA -> V: Validate params
+activate V
+V --> VA: Valid
+deactivate V
+
+VA -> TX: Start transaction
+activate TX
+
+VA -> VT: Find existing vote
+activate VT
+VT --> VA: Found upvote
+deactivate VT
+
+VA -> VA: Calculate vote difference
+note right of VA
+  Vote change:
+  - Remove upvote (-1 upvote)
+  - Add downvote (+1 downvote)
+  - Reputation: -10 (remove) + (-2) (add) = -12
+end note
+
+VA -> VT: Update vote type
+activate VT
+VT -> VT: Update voteType: "downvote"
+VT --> VA: Vote updated
+deactivate VT
+
+VA -> QA: Update content scores
+activate QA
+QA -> QA: $inc upvotes: -1
+QA -> QA: $inc downvotes: 1
+QA --> VA: Scores updated
+deactivate QA
+
+VA -> UM: Update reputation
+activate UM
+UM -> UM: $inc reputation: -12
+UM --> VA: Reputation updated
+deactivate UM
+
+VA -> TX: Commit transaction
+TX --> VA: Success
+deactivate TX
+
+VA --> F: Updated counts
+deactivate VA
+
+F --> U: Reflect new vote state
+deactivate F
+
+== Remove Vote (Unvote) ==
+
+U -> F: Click same vote button again
+activate F
+F -> F: Detect removal action
+note right of F
+  User clicked:
+  - Same button as current vote
+  - Action: Remove vote
+end note
+
+F -> VA: removeVote(params)
+activate VA
+
+VA -> V: Validate
+activate V
+V --> VA: Valid
+deactivate V
+
+VA -> TX: Start transaction
+activate TX
+
+VA -> VT: Find and delete vote
+activate VT
+VT -> VT: findOneAndDelete({user, actionId})
+VT --> VA: Deleted vote data
+deactivate VT
+
+alt Vote was upvote
+    VA -> QA: Decrement upvotes
+    activate QA
+    QA -> QA: $inc upvotes: -1
+    QA --> VA: Updated
+    deactivate QA
+    
+    VA -> UM: Reduce reputation
+    activate UM
+    UM -> UM: $inc reputation: -10
+    UM --> VA: Updated
+    deactivate UM
+else Vote was downvote
+    VA -> QA: Decrement downvotes
+    activate QA
+    QA -> QA: $inc downvotes: -1
+    QA --> VA: Updated
+    deactivate QA
+    
+    VA -> UM: Restore reputation
+    activate UM
+    UM -> UM: $inc reputation: +2
+    UM --> VA: Updated
+    deactivate UM
+end
+
+VA -> TX: Commit transaction
+TX --> VA: Success
+deactivate TX
+
+VA --> F: Success with reset counts
+deactivate VA
+
+F -> F: Reset vote button state
+F --> U: Show neutral state
+deactivate F
+
+== Prevent Self-Voting ==
+
+U -> F: Try to vote on own content
+activate F
+
+F -> F: Check content ownership
+note right of F
+  Frontend check:
+  - Compare session.userId
+  - With content.authorId
+  - Disable vote buttons if match
+end note
+
+alt Is own content
+    F --> U: Buttons disabled/hidden
+    F -> F: Show message
+    note right of F
+      "You cannot vote
+      on your own content"
+    end note
+else Not own content
+    F -> VA: Process vote normally
+    activate VA
+    VA -> VA: Server-side ownership check
+    alt Trying to self-vote
+        VA --> F: Error: "Cannot vote on own content"
+    else Valid vote
+        VA -> VT: Process vote
+        activate VT
+        VT --> VA: Success
+        deactivate VT
+        VA --> F: Success
+    end
+    deactivate VA
+end
+
+deactivate F
+
+== Reputation Milestones & Badges ==
+
+participant "Badge\nSystem" as B
+
+VA -> R: Check reputation milestones
+activate R
+
+R -> R: Calculate total reputation
+R -> R: Check badge thresholds
+note right of R
+  Badge levels:
+  - Bronze: 50+ reputation
+  - Silver: 200+ reputation
+  - Gold: 1000+ reputation
+  - Platinum: 5000+ reputation
+end note
+
+alt Milestone reached
+    R -> B: Award new badge
+    activate B
+    B -> B: Create badge record
+    B -> UM: Update user badge
+    activate UM
+    UM -> UM: Set badge field
+    UM --> B: Badge awarded
+    deactivate UM
+    B --> R: Badge assigned
+    deactivate B
+    
+    R -> R: Trigger notification
+    note right of R
+      Send notification:
+      "Congratulations! You earned
+      the [Badge Name] badge!"
+    end note
+end
+
+R --> VA: Reputation system updated
+deactivate R
+
+== Vote Analytics & Tracking ==
+
+participant "Interaction\nTracking" as I
+
+VA -> I: Log vote interaction
+activate I
+I -> I: Record vote event
+note right of I
+  Analytics data:
+  - userId
+  - action: "upvote"|"downvote"
+  - targetType: "question"|"answer"
+  - targetId
+  - timestamp
+  - previousVote (if changed)
+end note
+I --> VA: Logged
+deactivate I
+
+== Concurrent Vote Handling ==
+
+note over F, UM
+  **Race Condition Prevention:**
+  
+  Scenario: Two users vote simultaneously
+  
+  Solution:
+  1. MongoDB transactions ensure atomicity
+  2. Unique compound index on (user, actionId, actionType)
+  3. Prevents duplicate votes
+  4. One transaction succeeds, other fails gracefully
+  5. Failed transaction returns current state
+  
+  Example:
+  - User A votes at T0
+  - User B votes at T0+1ms
+  - User A's transaction locks document
+  - User B's transaction waits
+  - User A commits, User B proceeds
+  - Final state is consistent
+end note
+
+== Error Handling ==
+
+note over F, UM
+  **Error Scenarios:**
+  
+  1. **Network Failure**
+     - Rollback optimistic UI update
+     - Show retry option
+     - Cache vote for retry
+  
+  2. **Invalid Vote Target**
+     - Content deleted/not found
+     - Return error message
+     - Redirect to question list
+  
+  3. **Unauthorized Vote**
+     - Self-vote attempt
+     - Unauthenticated user
+     - Show login prompt
+  
+  4. **Database Error**
+     - Transaction rollback
+     - Preserve data consistency
+     - Log error for monitoring
+  
+  5. **Duplicate Vote**
+     - Unique constraint violation
+     - Return current vote state
+     - Update UI accordingly
+end note
+
+legend right
+  **Voting Rules:**
+  - Users must be authenticated
+  - Cannot vote on own content
+  - One vote per user per content
+  - Can change vote (upvote ↔ downvote)
+  - Can remove vote entirely
+  - Votes affect reputation immediately
+  
+  **Reputation System:**
+  - Question upvote: Author +10
+  - Question downvote: Author -2
+  - Answer upvote: Author +10
+  - Answer downvote: Author -2
+  - Accepted answer: Author +15
+  - Own answer accepted: +2
+  
+  **Performance:**
+  - Optimistic UI updates
+  - Atomic transactions
+  - Indexed vote lookups
+  - Cached reputation calculations
+  - Async analytics logging
+  
+  **Data Integrity:**
+  - Unique index prevents duplicates
+  - Transactions ensure consistency
+  - Cascading deletes on content removal
+  - Audit trail via interactions
+endlegend
+
+@enduml
