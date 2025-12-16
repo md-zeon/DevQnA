@@ -6,7 +6,12 @@ import { SignInWithOAuthParams } from "@/types/action";
 import { APIResponse } from "@/types/global";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api";
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (typeof window === "undefined"
+    ? process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/api`
+      : "http://localhost:3000/api"
+    : "/api");
 
 export const api = {
   auth: {
