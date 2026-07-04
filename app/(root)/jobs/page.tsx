@@ -1,10 +1,21 @@
+import { auth } from "@/auth";
+import ROUTES from "@/constants/routes";
+import { redirect } from "next/navigation";
 import JobCard from "@/components/cards/JobCard";
 import JobsFilter from "@/components/filters/JobFilter";
 import Pagination from "@/components/Pagination";
-import { fetchCountries, fetchJobs, fetchLocation } from "@/lib/actions/job.action";
+import {
+  fetchCountries,
+  fetchJobs,
+  fetchLocation,
+} from "@/lib/actions/job.action";
 import { RouteParams, Job } from "@/types/global";
 
 const FindJobs = async ({ searchParams }: RouteParams) => {
+  const session = await auth();
+
+  if (!session) return redirect(ROUTES.SIGN_IN);
+
   const { query, location, page } = await searchParams;
   const userLocation = await fetchLocation();
 
@@ -15,8 +26,6 @@ const FindJobs = async ({ searchParams }: RouteParams) => {
 
   const countries = await fetchCountries();
   const parsedPage = parseInt(page ?? 1);
-
-  console.log(jobs);
 
   return (
     <>
@@ -30,24 +39,17 @@ const FindJobs = async ({ searchParams }: RouteParams) => {
         {jobs?.length > 0 ? (
           jobs
             ?.filter((job: Job) => job.job_title)
-            .map((job: Job) => (
-              <JobCard
-                key={job.job_id}
-                job={job}
-              />
-            ))
+            .map((job: Job) => <JobCard key={job.job_id} job={job} />)
         ) : (
           <div className="paragraph-regular text-dark200_light800 w-full text-center">
-            Oops! We couldn&apos;t find any jobs at the moment. Please try again later
+            Oops! We couldn&apos;t find any jobs at the moment. Please try again
+            later
           </div>
         )}
       </section>
 
       {jobs?.length > 0 && (
-        <Pagination
-          page={parsedPage}
-          isNext={jobs?.length === 10}
-        />
+        <Pagination page={parsedPage} isNext={jobs?.length === 10} />
       )}
     </>
   );
