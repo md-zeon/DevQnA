@@ -8,11 +8,19 @@ export const fetchLocation = async () => {
 
 export const fetchCountries = async () => {
   try {
-    const response = await fetch("https://restcountries.com/v3.1/all?fields=name");
+    const response = await fetch(
+      "https://countriesnow.space/api/v0.1/countries/flag/images"
+    );
     const result = await response.json();
-    return result;
+    if (result.error === false && Array.isArray(result.data)) {
+      return result.data.map((country: { name: string }) => ({
+        name: { common: country.name },
+      }));
+    }
+    return [];
   } catch (error) {
     console.log(error);
+    return [];
   }
 };
 
