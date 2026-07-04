@@ -18,9 +18,12 @@ import { hasVoted } from "../../../../lib/actions/vote.action";
 import SaveQuestion from "@/components/questions/SaveQuestion";
 import { hasSavedQuestion } from "@/lib/actions/collection.action";
 import { Metadata } from "next";
+import { auth } from "@/auth";
 // import View from "../view";
 
-export async function generateMetadata({ params }: RouteParams): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: RouteParams): Promise<Metadata> {
   const { id } = await params;
   const { success, data: question } = await getQuestion({ questionId: id });
   if (!success || !question) {
@@ -42,6 +45,10 @@ export async function generateMetadata({ params }: RouteParams): Promise<Metadat
 }
 
 const QuestionDetails = async ({ params, searchParams }: RouteParams) => {
+  const session = await auth();
+
+  if (!session) return redirect(ROUTES.SIGN_IN);
+
   const { id } = await params;
 
   const { page, pageSize, filter } = await searchParams;
@@ -81,7 +88,8 @@ const QuestionDetails = async ({ params, searchParams }: RouteParams) => {
     questionId: question._id as string,
   });
 
-  const { title, author, content, answers, views, tags, createdAt } = question as any;
+  const { title, author, content, answers, views, tags, createdAt } =
+    question as any;
   return (
     <>
       {/* <View questionId={id} /> [View Approach 01] */}
@@ -97,7 +105,9 @@ const QuestionDetails = async ({ params, searchParams }: RouteParams) => {
             />
 
             <Link href={ROUTES.PROFILE(author._id as string)}>
-              <p className="paragraph-semibold text-dark300_light700">{author.name}</p>
+              <p className="paragraph-semibold text-dark300_light700">
+                {author.name}
+              </p>
             </Link>
           </div>
 
@@ -120,7 +130,9 @@ const QuestionDetails = async ({ params, searchParams }: RouteParams) => {
             </Suspense>
           </div>
         </div>
-        <h2 className="h2-semibold text-dark200_light900 mt-3.5 w-full">{title}</h2>
+        <h2 className="h2-semibold text-dark200_light900 mt-3.5 w-full">
+          {title}
+        </h2>
       </div>
 
       <div className="mb-8 mt-5 flex flex-wrap gap-4">

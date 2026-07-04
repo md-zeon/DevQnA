@@ -35,7 +35,7 @@ const UserAvatar = ({
             alt={name}
             className="object-cover"
             fill
-            quality={100}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
         ) : (
           <AvatarFallback

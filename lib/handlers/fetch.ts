@@ -42,10 +42,16 @@ export async function fetchHandler<T>(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new RequestError(
-        response.status,
-        `HTTP error! status: ${response.status}`
-      );
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorBody = await response.json();
+        if (errorBody?.error?.message) {
+          errorMessage = errorBody.error.message;
+        }
+      } catch {
+        // If we can't parse the error body, use the default message
+      }
+      throw new RequestError(response.status, errorMessage);
     }
 
     return await response.json();

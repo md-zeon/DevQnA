@@ -27,6 +27,7 @@ const nextConfig: NextConfig = {
         port: "",
       },
     ],
+    qualities: [25, 50, 75, 100], // Specify the desired quality levels
   },
 };
 

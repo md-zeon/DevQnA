@@ -156,6 +156,7 @@ const AnswerForm = ({
                 width={12}
                 height={12}
                 className="object-contain"
+                style={{ width: "auto", height: "auto" }}
               />
               Generate AI Answer
             </>

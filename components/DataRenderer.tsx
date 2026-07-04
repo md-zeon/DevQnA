@@ -50,6 +50,7 @@ const StateSkeleton = ({
         width={270}
         height={200}
         className="hidden object-contain dark:block"
+        style={{ width: "auto", height: "auto" }}
       />
       <Image
         src={image.light}
@@ -57,6 +58,7 @@ const StateSkeleton = ({
         width={270}
         height={200}
         className="block object-contain dark:hidden"
+        style={{ width: "auto", height: "auto" }}
       />
     </>
 
